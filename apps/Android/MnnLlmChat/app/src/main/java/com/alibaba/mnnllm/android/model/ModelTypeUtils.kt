@@ -21,20 +21,24 @@ object ModelTypeUtils {
     }
 
     /**
-     * R1: resolve the model directory from a modelId and check whether its config.json
-     * declares audio capability via the "audio_type" field (written by llmexport for
-     * audio/omni models such as Qwen3-ASR).
+     * R1: resolve the model directory from a modelId and check whether its config
+     * declares audio capability. llmexport writes "audio_type" / "is_audio" into
+     * llm_config.json (and newer versions also into config.json) for audio models
+     * such as Qwen3-ASR, so both files are checked.
      */
     fun hasAudioTypeConfig(modelId: String): Boolean {
         val modelDirPath = resolveModelDirPath(modelId) ?: return false
         audioConfigCache[modelDirPath]?.let { return it }
         val result = try {
-            val configFile = java.io.File(modelDirPath, "config.json")
-            if (configFile.exists()) {
-                val json = org.json.JSONObject(configFile.readText())
-                json.has("audio_type")
-            } else {
-                false
+            val configDir = java.io.File(modelDirPath)
+            listOf("config.json", "llm_config.json").any { fileName ->
+                val configFile = java.io.File(configDir, fileName)
+                if (configFile.exists()) {
+                    val json = org.json.JSONObject(configFile.readText())
+                    json.has("audio_type") || json.optBoolean("is_audio", false)
+                } else {
+                    false
+                }
             }
         } catch (e: Exception) {
             android.util.Log.w("ModelTypeUtils", "hasAudioTypeConfig: failed to read config for $modelId", e)
