@@ -20,12 +20,12 @@ import android.util.Log
 import com.alibaba.mnnllm.android.llm.AsrTranscriber
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.trySend
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 class ChunkedAsrProbe(
     private val context: android.content.Context,
@@ -42,12 +42,14 @@ class ChunkedAsrProbe(
     private val isRecording = AtomicBoolean(false)
     private var audioRecord: AudioRecord? = null
     private var captureThread: Thread? = null
-    private var workerJob: Job? = null
 
     private val pcmBacklog = java.io.ByteArrayOutputStream()
     private val backlogLock = Any()
     private val chunkIndex = AtomicInteger(0)
-    private val chunkQueue = Channel<File>(Channel.UNLIMITED)
+    // Plain unbounded BlockingQueue instead of kotlinx Channel: the app's
+    // coroutines version predates trySend, and ordering guarantees suffice.
+    private val chunkQueue = LinkedBlockingQueue<File>()
+    private val queueClosed = AtomicBoolean(false)
     private val workerScope = CoroutineScope(Dispatchers.IO)
 
     fun start() {
@@ -73,14 +75,15 @@ class ChunkedAsrProbe(
         // Single worker: chunks are transcribed strictly in order. If one chunk
         // takes longer than the interval, later chunks queue up (never dropped)
         // and the growing queue itself is a research signal.
-        workerJob = workerScope.launch {
-            for (wav in chunkQueue) {
+        workerScope.launch {
+            while (!queueClosed.get() || !chunkQueue.isEmpty()) {
+                val wav = chunkQueue.poll(300, TimeUnit.MILLISECONDS) ?: continue
                 try {
                     val t0 = System.currentTimeMillis()
                     val text = AsrTranscriber.transcribe(wav.absolutePath)
                     val latency = System.currentTimeMillis() - t0
                     val audioSec = wav.length().let { it - 44 } / 2.0 / SAMPLE_RATE
-                    Log.d(TAG, "chunk #$chunkIndex audio=${"%.1f".format(audioSec)}s latency=${latency}ms text=$text")
+                    Log.d(TAG, "chunk #" + chunkIndex.get() + " audio=" + audioSec + "s latency=" + latency + "ms text=" + text)
                     onChunkResult(chunkIndex.get(), audioSec, latency, text)
                     wav.delete()
                     chunkIndex.incrementAndGet()
@@ -108,7 +111,7 @@ class ChunkedAsrProbe(
         audioRecord = null
         // Flush a final partial chunk if there is leftover audio.
         flushChunk(final = true)
-        chunkQueue.close() // worker drains remaining chunks then exits
+        queueClosed.set(true) // worker drains remaining chunks then exits
         Log.i(TAG, "probe stopped after ${chunkIndex.get()} chunks")
     }
 
@@ -147,10 +150,7 @@ class ChunkedAsrProbe(
         val dir = File(context.cacheDir, "stream_probe").apply { mkdirs() }
         val wav = File(dir, "chunk_$index.wav")
         writeWav(wav, bytes, SAMPLE_RATE)
-        if (!chunkQueue.trySend(wav).isSuccess) {
-            Log.w(TAG, "chunk queue full — dropping chunk #$index")
-            wav.delete()
-        }
+        chunkQueue.put(wav) // unbounded queue: never overflows
         if (final) {
             Log.d(TAG, "final flush chunk #$index (${bytes.size / 2.0 / SAMPLE_RATE}s)")
         }
