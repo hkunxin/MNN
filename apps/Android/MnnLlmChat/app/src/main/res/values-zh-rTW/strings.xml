@@ -284,6 +284,11 @@
     <string name="import_local_no_candidates">在 %1$s 中未發現可匯入的模型。\n請將轉換好的模型目錄（含 config.json）放入該目錄後重試。</string>
     <string name="import_local_confirm">匯入所選</string>
     <string name="import_local_done">已匯入 %1$d 個模型，稍後將出現在列表中</string>
+
+    <!-- Dual-model ASR (R3) -->
+    <string name="asr_transcribing_hint">正在辨識語音…</string>
+    <string name="asr_transcribe_failed">語音辨識失敗，請重試</string>
+    <string name="asr_transcribe_empty">未辨識到語音內容</string>
     <string name="model_not_found">找不到模型 %1$s</string>
     <string name="out_audio">音訊輸出</string>
     <string name="audio_output_confirm">目前音訊輸出可能較慢。您是否仍要開啟？</string>

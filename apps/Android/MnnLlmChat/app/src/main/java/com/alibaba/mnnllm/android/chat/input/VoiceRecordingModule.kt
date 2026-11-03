@@ -45,9 +45,9 @@ class VoiceRecordingModule(private val activity: ChatActivity) {
         this.listener = listener
     }
 
-    fun setup(isAudioModel: Boolean) {
+    fun setup(supportsVoice: Boolean) {
         buttonSwitchVoice = activity.findViewById(R.id.bt_switch_audio)
-        updateVoiceButtonVisibility(isAudioModel)
+        updateVoiceButtonVisibility(supportsVoice)
         inputCardContainer = activity.findViewById(R.id.input_card_container)
         voceRecordingWave = activity.findViewById(R.id.voice_recording_wav)
         buttonVoiceRecording = activity.findViewById(R.id.btn_voice_recording)
@@ -68,13 +68,12 @@ class VoiceRecordingModule(private val activity: ChatActivity) {
     /**
      * Update the model name and refresh voice button visibility
      */
-    fun updateModel(modelName: String) {
+    fun updateModel(modelName: String, supportsVoice: Boolean) {
         currentModelName = modelName
-        val isAudioModel = com.alibaba.mnnllm.android.model.ModelTypeUtils.isAudioModel(activity.modelId!!)
-        updateVoiceButtonVisibility(isAudioModel)
-        
-        // If switching away from audio model and currently in recording mode, exit
-        if (!isAudioModel && isRecordingMode()) {
+        updateVoiceButtonVisibility(supportsVoice)
+
+        // If voice input is not supported and currently in recording mode, exit
+        if (!supportsVoice && isRecordingMode()) {
             exitRecordingMode()
         }
     }

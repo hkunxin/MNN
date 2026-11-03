@@ -285,6 +285,11 @@
     <string name="import_local_no_candidates">在 %1$s 中未发现可导入的模型。\n请将转换好的模型目录（含 config.json）放入该目录后重试。</string>
     <string name="import_local_confirm">导入所选</string>
     <string name="import_local_done">已导入 %1$d 个模型，稍后将出现在列表中</string>
+
+    <!-- Dual-model ASR (R3) -->
+    <string name="asr_transcribing_hint">正在识别语音…</string>
+    <string name="asr_transcribe_failed">语音识别失败，请重试</string>
+    <string name="asr_transcribe_empty">未识别到语音内容</string>
     <string name="model_not_found">Model not foud %1$s</string>
     <string name="out_audio">音频输出</string>
     <string name="audio_output_confirm">当前音频输出可能较慢。您是否仍要打开？</string>

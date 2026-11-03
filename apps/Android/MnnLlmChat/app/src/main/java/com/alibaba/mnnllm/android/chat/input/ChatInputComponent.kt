@@ -87,7 +87,10 @@ class ChatInputComponent(
             setupAttachmentPickerModule()
         }
         // Update voice recording module
-        voiceRecordingModule.updateModel(newModelName)
+        voiceRecordingModule.updateModel(
+            newModelName,
+            ModelTypeUtils.isAudioModel(newModelId) || isDualModelVoiceReady()
+        )
         
         // Update voice button visibility
         updateVoiceButtonVisibility()
@@ -239,13 +242,15 @@ class ChatInputComponent(
     }
 
     private fun updateVoiceButtonVisibility() {
-        if (!ModelTypeUtils.isAudioModel(currentModelId)) {
+        // R3: voice input is available for audio models (direct send) and for text
+        // LLMs when an imported ASR model exists (dual-model mode: speech to input box)
+        val supportsVoice = ModelTypeUtils.isAudioModel(currentModelId) || isDualModelVoiceReady()
+        if (!supportsVoice) {
+            buttonSwitchVoice!!.visibility = View.GONE
             return
         }
         var visible = true
-        if (!ModelTypeUtils.isAudioModel(currentModelId)) {
-            visible = false
-        } else if (chatActivity.isGenerating) {
+        if (chatActivity.isGenerating) {
             visible = false
         } else if (currentUserMessage != null) {
             visible = false
@@ -254,6 +259,18 @@ class ChatInputComponent(
         }
         buttonSwitchVoice!!.visibility =
             if (visible) View.VISIBLE else View.GONE
+    }
+
+    /** R3: current model is a text LLM and an imported ASR model is available. */
+    private fun isDualModelVoiceReady(): Boolean {
+        if (ModelTypeUtils.isAudioModel(currentModelId)) {
+            return false
+        }
+        return try {
+            com.alibaba.mnnllm.android.llm.AsrTranscriber.hasAsrModel()
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun setupAttachmentPickerModule() {
@@ -331,19 +348,72 @@ class ChatInputComponent(
             }
 
             override fun onRecordSuccess(duration: Float, recordingFilePath: String?) {
-                val chatDataItem = ChatDataItem.createAudioInputData(
-                    chatActivity.dateFormat!!.format(Date()),
-                    "",
-                    recordingFilePath!!,
-                    duration
-                )
-                this@ChatInputComponent.onSendMessage?.let { it(chatDataItem) }
+                if (ModelTypeUtils.isAudioModel(currentModelId)) {
+                    // R4: audio model — send the recording directly
+                    val chatDataItem = ChatDataItem.createAudioInputData(
+                        chatActivity.dateFormat!!.format(Date()),
+                        "",
+                        recordingFilePath!!,
+                        duration
+                    )
+                    this@ChatInputComponent.onSendMessage?.let { it(chatDataItem) }
+                } else if (isDualModelVoiceReady()) {
+                    // R3: dual-model mode — transcribe and put text into the input box
+                    handleAsrTranscription(recordingFilePath!!)
+                } else {
+                    java.io.File(recordingFilePath ?: "").delete()
+                }
             }
 
             override fun onRecordCanceled() {
             }
         })
-        voiceRecordingModule!!.setup(chatActivity.isAudioModel)
+        voiceRecordingModule!!.setup(chatActivity.isAudioModel || isDualModelVoiceReady())
+    }
+
+    /**
+     * R3: transcribe the recorded WAV with the helper ASR session and put the
+     * recognized text into the input box (editable, NOT sent to the LLM).
+     */
+    private var asrTranscribing = false
+
+    private fun handleAsrTranscription(recordingFilePath: String) {
+        if (asrTranscribing) {
+            return
+        }
+        asrTranscribing = true
+        voiceRecordingModule.exitRecordingMode()
+        editUserMessage.setText("")
+        editUserMessage.hint = chatActivity.getString(R.string.asr_transcribing_hint)
+        updateSenderButton()
+        chatActivity.lifecycleScope.launch {
+            val result = runCatching {
+                withContext(Dispatchers.IO) {
+                    com.alibaba.mnnllm.android.llm.AsrTranscriber.transcribe(recordingFilePath)
+                }
+            }
+            asrTranscribing = false
+            editUserMessage.hint = chatActivity.getString(R.string.input_messages)
+            result.onSuccess { text ->
+                if (text.isNotBlank()) {
+                    editUserMessage.setText(text)
+                    editUserMessage.setSelection(text.length)
+                    editUserMessage.requestFocus()
+                    KeyboardUtils.showKeyboard(editUserMessage)
+                } else {
+                    android.widget.Toast.makeText(
+                        chatActivity, R.string.asr_transcribe_empty, android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }.onFailure { e ->
+                Log.e(TAG, "ASR transcription failed", e)
+                android.widget.Toast.makeText(
+                    chatActivity, R.string.asr_transcribe_failed, android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+            updateSenderButton()
+            java.io.File(recordingFilePath).delete()
+        }
     }
 
     fun setOnSendMessage(onSendMessage: (ChatDataItem)->Unit) {
@@ -371,7 +441,7 @@ class ChatInputComponent(
 
     fun onLoadingStatesChanged(loading: Boolean) {
         this.updateSenderButton()
-        if (!loading && ModelTypeUtils.isAudioModel(currentModelId)) {
+        if (!loading && (ModelTypeUtils.isAudioModel(currentModelId) || isDualModelVoiceReady())) {
             voiceRecordingModule.onEnabled()
         }
     }

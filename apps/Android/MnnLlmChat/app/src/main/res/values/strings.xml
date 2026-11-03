@@ -301,6 +301,11 @@
     <string name="import_local_no_candidates">No importable models found in %1$s.\nPut converted model directories (containing config.json) there and retry.</string>
     <string name="import_local_confirm">Import selected</string>
     <string name="import_local_done">Imported %1$d model(s), they will appear in the list</string>
+
+    <!-- Dual-model ASR (R3) -->
+    <string name="asr_transcribing_hint">Recognizing speech…</string>
+    <string name="asr_transcribe_failed">Speech recognition failed, please try again</string>
+    <string name="asr_transcribe_empty">No speech recognized</string>
     <string name="model_not_found">Model not found %1$s</string>
     <string name="out_audio">Output Audio</string>
     <string name="audio_output_confirm">Audio Output is very slow for now, Would you like to continue anyway?</string>
