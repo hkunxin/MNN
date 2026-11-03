@@ -108,6 +108,7 @@ class DebugActivity : AppCompatActivity() {
     private val testCases = listOf(
         TestCase("asr", "ASR Test", R.layout.debug_test_asr),
         TestCase("streamAsr", "Streaming ASR Research", R.layout.debug_test_stream_asr),
+        TestCase("notify", "Notify Assistant", R.layout.debug_test_notify),
         TestCase("tts", "TTS Test", R.layout.debug_test_tts),
         TestCase("scan", "Model Scan Test", R.layout.debug_test_scan),
         TestCase("settings", "Debug Settings", R.layout.debug_test_settings)
@@ -183,6 +184,7 @@ class DebugActivity : AppCompatActivity() {
         when (testCase.id) {
             "asr" -> initAsrViews(view)
             "streamAsr" -> initStreamAsrViews(view)
+            "notify" -> initNotifyViews(view)
             "tts" -> initTtsViews(view)
             "scan" -> initScanViews(view)
             "settings" -> initSettingsViews(view)
@@ -706,6 +708,52 @@ class DebugActivity : AppCompatActivity() {
                 Log.e(TAG, "Error processing TTS", e)
             }
         }
+    }
+
+    // ---- Spec-002 task 1: notification assistant chain status ----
+
+    private var notifyStatusText: TextView? = null
+
+    private fun initNotifyViews(parentView: View) {
+        notifyStatusText = parentView.findViewById(R.id.notifyStatusText)
+        parentView.findViewById<Button>(R.id.notifyAccessButton).setOnClickListener {
+            try {
+                startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            } catch (e: Exception) {
+                log("无法打开通知使用权设置: ${e.message}")
+            }
+        }
+        parentView.findViewById<Button>(R.id.notifyRefreshButton).setOnClickListener {
+            refreshNotifyStatus()
+        }
+        refreshNotifyStatus()
+    }
+
+    private fun refreshNotifyStatus() {
+        val text = notifyStatusText ?: return
+        val sb = StringBuilder()
+        sb.append("listener bound: ").append(
+            com.alibaba.mnnllm.android.assistant.notify.SmartNotificationListener.isConnected())
+        sb.append("\n\nlogcat 过滤:  adb logcat -s SmartNotify\n")
+        sb.append("\n规则 (assistant_notify_prefs):\n")
+        try {
+            val sp = getSharedPreferences(
+                com.alibaba.mnnllm.android.assistant.notify.AssistantNotifyConfig.PREFS_NAME,
+                android.content.Context.MODE_PRIVATE)
+            sb.append("master_enabled = ").append(sp.getBoolean("master_enabled", true)).append("\n")
+            sb.append("content_enabled = ").append(sp.getBoolean("content_enabled", false)).append("\n")
+            sb.append("rules(渠道屏蔽) = [").append(sp.getString("rules", "")?.take(200)).append("]\n")
+            sb.append("allow_rules(白名单) = [").append(sp.getString("allow_rules", "")?.take(200)).append("]\n")
+            sb.append("content_rules(内容屏蔽) = [").append(sp.getString("content_rules", "")?.take(200)).append("]\n")
+        } catch (e: Exception) {
+            sb.append("读取失败: ").append(e.message)
+        }
+        sb.append("\n默认渠道规则: .*营销.*  (内置, 总是生效)\n")
+        sb.append("观察到的渠道存储: filesDir/assistant_channels.json\n")
+        sb.append("内容拦截日志: filesDir/assistant_block_log.json")
+        text.text = sb.toString()
+        log("notify status refreshed: bound=" +
+                com.alibaba.mnnllm.android.assistant.notify.SmartNotificationListener.isConnected())
     }
 
     override fun onDestroy() {

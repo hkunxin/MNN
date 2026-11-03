@@ -164,6 +164,17 @@
             android:exported="false"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen" />
 
+        <!-- Spec-002 notification assistant: root-free listener chain (regex
+             instant-cancel; LLM batched judgment attaches in later tasks). -->
+        <service
+            android:name="com.alibaba.mnnllm.android.assistant.notify.SmartNotificationListener"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
     </application>
 
 </manifest>
