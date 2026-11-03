@@ -5,6 +5,10 @@ package com.alibaba.mnnllm.android.modelsettings
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -284,7 +288,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 1f..100f,
             decimalPlaces = 0,
             onValueChange = { currentConfig.topK = it.toInt() },
-            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.TopK, it)}
+            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.TopK, it)},
+            description = "只从概率最高的 K 个词里选，越小回答越确定"
         )
         currentConfig.tfsZ = currentConfig.tfsZ ?: defaultConfig.tfsZ!!
         setupSliderSwitchRow(
@@ -295,7 +300,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 0f..1f,
             decimalPlaces = 0,
             onValueChange = { currentConfig.tfsZ = it },
-            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.Tfs, it)}
+            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.Tfs, it)},
+            description = "按词频分布平滑截断，抑制生僻表达"
         )
         currentConfig.typical = currentConfig.typical ?: defaultConfig.typical!!
         setupSliderSwitchRow(
@@ -306,7 +312,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 0f..1f,
             decimalPlaces = 0,
             onValueChange = { currentConfig.typical = it },
-            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.Typical, it)}
+            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.Typical, it)},
+            description = "过滤偏离常规的用词，回答更连贯"
         )
         currentConfig.topP = currentConfig.topP ?: defaultConfig.topP!!
         setupSliderSwitchRow(
@@ -317,7 +324,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 0f..1f,
             decimalPlaces = 2,
             onValueChange = { currentConfig.topP = it },
-            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.TopP, it)}
+            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.TopP, it)},
+            description = "按累计概率截断候选词，越小回答越保守"
         )
         currentConfig.minP = currentConfig.minP ?: defaultConfig.minP!!
         setupSliderSwitchRow(
@@ -328,7 +336,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 0f..1f,
             decimalPlaces = 2,
             onValueChange = { currentConfig.minP = it },
-            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.MinP, it)}
+            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.MinP, it)},
+            description = "过滤概率过低的长尾用词"
         )
         currentConfig.temperature = currentConfig.temperature ?: defaultConfig.temperature!!
         setupSliderSwitchRow(
@@ -339,7 +348,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 0f..2f,
             decimalPlaces = 2,
             onValueChange = { currentConfig.temperature = it },
-            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.Temperature, it)}
+            onEnabledChange = { toggleEnable(currentConfig.mixedSamplers!!, SamplerType.Temperature, it)},
+            description = "温度：越高回答越发散有创意，越低越稳定保守"
         )
 
         // Add penalty settings to mixed sampler
@@ -361,7 +371,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             onEnabledChange = { enabled ->
                 toggleEnable(currentConfig.mixedSamplers!!, SamplerType.Penalty, enabled)
                 updateMixedPenaltyControlsState(enabled)
-            }
+            },
+            description = "重复惩罚：越高越不容易重复啰嗦"
         )
 
         currentConfig.nGram = currentConfig.nGram ?: defaultConfig.nGram!!
@@ -373,7 +384,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 1f..16f,
             decimalPlaces = 0,
             onValueChange = { currentConfig.nGram = it.toInt() },
-            switchVisible = false
+            switchVisible = false,
+            description = "连续 n 个词算一段，检测重复片段"
         )
 
         currentConfig.nGramFactor = currentConfig.nGramFactor ?: defaultConfig.nGramFactor!!
@@ -385,7 +397,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 1f..2f,
             decimalPlaces = 1,
             onValueChange = { currentConfig.nGramFactor = it },
-            switchVisible = false
+            switchVisible = false,
+            description = "重复段落惩罚的放大系数"
         )
 
         penaltySamplerValue = currentConfig.penaltySampler ?: defaultConfig.penaltySampler!!
@@ -426,7 +439,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 0f..5f,
             decimalPlaces = 2,
             onValueChange = { currentConfig.penalty = it },
-            switchVisible = false
+            switchVisible = false,
+            description = "重复惩罚：越高越不容易重复啰嗦"
         )
 
         setupSliderSwitchRow(
@@ -437,7 +451,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 1f..16f,
             decimalPlaces = 0,
             onValueChange = { currentConfig.nGram = it.toInt() },
-            switchVisible = false
+            switchVisible = false,
+            description = "连续 n 个词算一段，检测重复片段"
         )
 
         setupSliderSwitchRow(
@@ -448,7 +463,8 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
             valueRange = 1f..2f,
             decimalPlaces = 1,
             onValueChange = { currentConfig.nGramFactor = it },
-            switchVisible = false
+            switchVisible = false,
+            description = "重复段落惩罚的放大系数"
         )
         penaltySamplerValue = currentConfig.penaltySampler ?: defaultConfig.penaltySampler!!
         binding.dropdownPenaltySampler.setDropDownItems(listOf("greedy", "temperature")) { _, value ->
@@ -467,10 +483,11 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
         decimalPlaces: Int,
         onValueChange: (Float) -> Unit,
         onEnabledChange: (Boolean) -> Unit = {},
-        switchVisible: Boolean = true
+        switchVisible: Boolean = true,
+        description: String? = null
     ) {
         val valueFormat = "%.${decimalPlaces}f"
-        rowBinding.labelSlider.text = label
+        rowBinding.labelSlider.text = describedLabel(label, description)
         rowBinding.valueSlider.text = String.format(Locale.US, valueFormat, initialValue)
 
         val maxProgress = 1000
@@ -515,6 +532,21 @@ class SettingsBottomSheetFragment : BaseSettingsBottomSheetFragment() {
         }
         binding.buttonReset.setOnClickListener {
             resetSettingsToDefaults()
+        }
+    }
+
+    /**
+     * Render "Label\n中文说明" — the annotation line in smaller gray text so
+     * each sampler parameter is self-explaining (user request 2026-11-04).
+     */
+    private fun describedLabel(label: String, description: String?): CharSequence {
+        if (description == null) {
+            return label
+        }
+        return SpannableString("$label\n$description").apply {
+            val start = label.length + 1
+            setSpan(RelativeSizeSpan(0.72f), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(ForegroundColorSpan(0xFF8A8A8A.toInt()), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 
