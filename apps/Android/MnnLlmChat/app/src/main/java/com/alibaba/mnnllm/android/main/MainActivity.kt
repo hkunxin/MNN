@@ -29,6 +29,7 @@ import com.alibaba.mnnllm.android.widgets.FullScreenDrawerLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import com.alibaba.mls.api.download.ModelDownloadManager
 import com.alibaba.mls.api.source.ModelSources
 import com.alibaba.mnnllm.android.R
@@ -118,6 +119,10 @@ class MainActivity : AppCompatActivity(), MainFragmentManager.FragmentLifecycleL
             val filterDownloadedItem = menu.findItem(R.id.action_filter_downloaded)
             filterDownloadedItem.isVisible = bottomNav.getSelectedTab() == BottomTabBar.Tab.LOCAL_MODELS
             filterDownloadedItem.isChecked = PreferenceUtils.isFilterDownloaded(this@MainActivity)
+
+            // Show "local import" only on LOCAL_MODELS tab (R2)
+            menu.findItem(R.id.action_import_local).isVisible =
+                bottomNav.getSelectedTab() == BottomTabBar.Tab.LOCAL_MODELS
         }
     }
 
@@ -190,6 +195,100 @@ class MainActivity : AppCompatActivity(), MainFragmentManager.FragmentLifecycleL
             invalidateOptionsMenu()
             true
         }
+
+        // R2: local model import entry
+        val importLocalItem = menu.findItem(R.id.action_import_local)
+        importLocalItem.setOnMenuItemClickListener {
+            onImportLocalModels()
+            true
+        }
+    }
+
+    // R2: scan well-known directories and let the user pick model directories to import
+    private fun onImportLocalModels() {
+        // /sdcard/mnn-models requires "All files access" on Android 11+ (targetSdk 35)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R &&
+            !android.os.Environment.isExternalStorageManager()
+        ) {
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.import_local_models)
+                .setMessage(R.string.import_local_storage_permission_rationale)
+                .setPositiveButton(R.string.import_local_grant_permission) { _, _ ->
+                    try {
+                        val intent = Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                        intent.data = android.net.Uri.parse("package:$packageName")
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        startActivity(Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+            return
+        }
+        val context = this
+        lifecycleScope.launch {
+            val candidates = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                com.alibaba.mnnllm.android.modelist.ModelImporter.scanCandidates(context)
+            }
+            showLocalImportDialog(candidates)
+        }
+    }
+
+    private fun showLocalImportDialog(
+        candidates: List<com.alibaba.mnnllm.android.modelist.ModelImporter.Candidate>
+    ) {
+        if (candidates.isEmpty()) {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.import_local_models)
+                .setMessage(getString(R.string.import_local_no_candidates, com.alibaba.mnnllm.android.modelist.ModelImporter.DEFAULT_SCAN_DIR))
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
+            return
+        }
+        val labels = candidates.map { candidate ->
+            val sizeText = if (candidate.valid) {
+                String.format("%.1f GB", candidate.sizeBytes / 1024.0 / 1024.0 / 1024.0)
+                    .replace(".0 GB", " GB")
+            } else ""
+            buildString {
+                append(candidate.name)
+                if (sizeText.isNotEmpty()) append(" · ").append(sizeText)
+                candidate.invalidReason?.let { append("  ⚠ ").append(it) }
+                if (candidate.alreadyImported) append(" · ✓")
+            }
+        }.toTypedArray()
+        val checked = BooleanArray(candidates.size) { candidates[it].alreadyImported }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.import_local_models)
+            .setMultiChoiceItems(labels, checked) { _, which, isChecked ->
+                checked[which] = isChecked
+            }
+            .setPositiveButton(R.string.import_local_confirm) { _, _ ->
+                var importedCount = 0
+                candidates.forEachIndexed { index, candidate ->
+                    if (!candidate.valid) return@forEachIndexed
+                    if (checked[index] && !candidate.alreadyImported) {
+                        com.alibaba.mnnllm.android.modelist.ModelImporter
+                            .addImportedModelPath(this@MainActivity, candidate.path)
+                        importedCount++
+                    }
+                }
+                if (importedCount > 0) {
+                    android.widget.Toast.makeText(
+                        this@MainActivity,
+                        getString(R.string.import_local_done, importedCount),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    lifecycleScope.launch {
+                        com.alibaba.mnnllm.android.modelist.ModelListManager.notifyModelListMayChange(
+                            com.alibaba.mnnllm.android.modelist.ModelListManager.ChangeReason.MANUAL_REFRESH
+                        )
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun handleSearch(query: String) {

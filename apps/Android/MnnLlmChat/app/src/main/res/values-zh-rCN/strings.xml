@@ -277,6 +277,14 @@
     <string name="regenerate">重新生成</string>
     <string name="copy_audio_info">Copy Audio Info</string>
     <string name="report_crash">Report Crash</string>
+
+    <!-- Local model import (R2) -->
+    <string name="import_local_models">本地导入模型</string>
+    <string name="import_local_storage_permission_rationale">扫描 %1$s 需要"所有文件访问"权限，请在系统设置中授权后再导入本地模型。</string>
+    <string name="import_local_grant_permission">去授权</string>
+    <string name="import_local_no_candidates">在 %1$s 中未发现可导入的模型。\n请将转换好的模型目录（含 config.json）放入该目录后重试。</string>
+    <string name="import_local_confirm">导入所选</string>
+    <string name="import_local_done">已导入 %1$d 个模型，稍后将出现在列表中</string>
     <string name="model_not_found">Model not foud %1$s</string>
     <string name="out_audio">音频输出</string>
     <string name="audio_output_confirm">当前音频输出可能较慢。您是否仍要打开？</string>

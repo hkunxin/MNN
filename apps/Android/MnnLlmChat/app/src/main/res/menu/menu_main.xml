@@ -8,6 +8,12 @@
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="ifRoom|collapseActionView" />
     <item
+        android:id="@+id/action_import_local"
+        android:title="@string/import_local_models"
+        android:iconTint="@color/color_foreground"
+        app:showAsAction="always" />
+
+    <item
         android:id="@+id/action_filter_downloaded"
         android:title="@string/show_only_downloaded"
         android:checkable="true"

@@ -276,6 +276,14 @@
     <string name="regenerate">重新生成</string>
     <string name="copy_audio_info">複製音訊資訊</string>
     <string name="report_crash">回報崩潰</string>
+
+    <!-- Local model import (R2) -->
+    <string name="import_local_models">本機匯入模型</string>
+    <string name="import_local_storage_permission_rationale">掃描 %1$s 需要「所有檔案存取」權限，請在系統設定中授權後再匯入本機模型。</string>
+    <string name="import_local_grant_permission">前往授權</string>
+    <string name="import_local_no_candidates">在 %1$s 中未發現可匯入的模型。\n請將轉換好的模型目錄（含 config.json）放入該目錄後重試。</string>
+    <string name="import_local_confirm">匯入所選</string>
+    <string name="import_local_done">已匯入 %1$d 個模型，稍後將出現在列表中</string>
     <string name="model_not_found">找不到模型 %1$s</string>
     <string name="out_audio">音訊輸出</string>
     <string name="audio_output_confirm">目前音訊輸出可能較慢。您是否仍要開啟？</string>

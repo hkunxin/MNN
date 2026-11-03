@@ -7,9 +7,63 @@ import com.alibaba.mnnllm.android.modelist.ModelListManager
 
 object ModelTypeUtils {
 
+    // R1: cache for config.json audio_type checks (path -> hasAudioType) to avoid repeated IO
+    private val audioConfigCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
+
     fun isAudioModel(modelId: String): Boolean {
-        return modelId.lowercase(Locale.getDefault()).contains("audio") || isOmni(modelId)
-                || ModelListManager.isAudioModel(modelId)
+        if (modelId.lowercase(Locale.getDefault()).contains("audio") || isOmni(modelId)
+            || ModelListManager.isAudioModel(modelId)) {
+            return true
+        }
+        // R1: fallback to config.json audio_type detection (e.g. locally imported models
+        // whose directory name does not contain "audio"/"omni")
+        return hasAudioTypeConfig(modelId)
+    }
+
+    /**
+     * R1: resolve the model directory from a modelId and check whether its config.json
+     * declares audio capability via the "audio_type" field (written by llmexport for
+     * audio/omni models such as Qwen3-ASR).
+     */
+    fun hasAudioTypeConfig(modelId: String): Boolean {
+        val modelDirPath = resolveModelDirPath(modelId) ?: return false
+        audioConfigCache[modelDirPath]?.let { return it }
+        val result = try {
+            val configFile = java.io.File(modelDirPath, "config.json")
+            if (configFile.exists()) {
+                val json = org.json.JSONObject(configFile.readText())
+                json.has("audio_type")
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("ModelTypeUtils", "hasAudioTypeConfig: failed to read config for $modelId", e)
+            false
+        }
+        audioConfigCache[modelDirPath] = result
+        return result
+    }
+
+    private fun resolveModelDirPath(modelId: String): String? {
+        return if (modelId.startsWith("local/")) {
+            modelId.removePrefix("local/")
+        } else {
+            try {
+                com.alibaba.mls.api.download.ModelDownloadManager
+                    .getInstance(com.alibaba.mls.api.ApplicationProvider.get())
+                    .getDownloadedFile(modelId)?.absolutePath
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    fun clearAudioConfigCache(modelDirPath: String? = null) {
+        if (modelDirPath == null) {
+            audioConfigCache.clear()
+        } else {
+            audioConfigCache.remove(modelDirPath)
+        }
     }
 
     fun isMultiModalModel(modelName: String): Boolean {
