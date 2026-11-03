@@ -33,6 +33,7 @@ import com.alibaba.mnnllm.android.chat.input.ChatInputComponent
 import com.alibaba.mnnllm.android.chat.model.ChatDataItem
 import com.alibaba.mnnllm.android.databinding.ActivityChatBinding
 import com.alibaba.mnnllm.android.llm.AudioDataListener
+import com.alibaba.mnnllm.android.llm.AsrTranscriber
 import com.alibaba.mnnllm.android.llm.LlmSession
 import com.alibaba.mnnllm.android.mainsettings.MainSettings.isApiServiceEnabled
 import com.alibaba.mnnllm.android.modelsettings.SettingsBottomSheetFragment
@@ -645,6 +646,9 @@ class ChatActivity : AppCompatActivity() {
     override fun onDestroy() {
         saveInterruptedResponseIfNeeded()
         super.onDestroy()
+        // Spec 001 R3: free the helper ASR session with the chat page —
+        // it is lazily reloaded (from mmap cache) on next use.
+        AsrTranscriber.release()
         mockStreamRunnable?.let(mockStreamHandler::removeCallbacks)
         mockStreamRunnable = null
         audioPlayer?.destroy()

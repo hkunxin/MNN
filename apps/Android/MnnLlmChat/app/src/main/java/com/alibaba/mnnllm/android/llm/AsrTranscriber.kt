@@ -5,7 +5,11 @@ package com.alibaba.mnnllm.android.llm
 import android.util.Log
 import com.alibaba.mnnllm.android.model.ModelTypeUtils
 import com.alibaba.mnnllm.android.modelist.LocalModelsProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -13,12 +17,26 @@ object AsrTranscriber {
 
     private const val TAG = "AsrTranscriber"
 
+    /**
+     * Memory strategy (Spec 001 内存风险项):
+     * 1. use_mmap=true → weights are file-backed pages; the OS can reclaim them
+     *    under pressure, so "resident" cost is soft page cache rather than hard RSS.
+     * 2. use_cached_mmap (engine default on) + mmap_dir → the first load writes a
+     *    preprocessed cache, so subsequent loads are fast (no cold full re-parse).
+     * 3. Idle auto-release → after IDLE_RELEASE_MS without a transcription the
+     *    session is freed; next use reloads from the mmap cache (fast).
+     */
+    private const val IDLE_RELEASE_MS = 5 * 60 * 1000L
+
     /** Cached ASR model: modelId to model directory path. */
     @Volatile
     private var cachedAsrModel: Pair<String, String>? = null
 
     /** Persistent helper session for the ASR model (loaded on first use). */
     private var asrSession: LlmSession? = null
+
+    private val releaseScope = CoroutineScope(Dispatchers.Default)
+    private var idleReleaseJob: Job? = null
 
     fun hasAsrModel(): Boolean = findAsrModel() != null
 
@@ -78,7 +96,8 @@ object AsrTranscriber {
         val response = result["response"] as? String
         val text = (response ?: collected.toString()).trim()
         Log.d(TAG, "transcribe: wav=$wavPath text=$text")
-        text
+        scheduleIdleRelease()
+        return@withContext text
     }
 
     private fun ensureSession(modelId: String, modelPath: String): LlmSession {
@@ -97,7 +116,8 @@ object AsrTranscriber {
                 modelPath + "/config.json",
                 null,
                 null,
-                useCustomConfig = false
+                useCustomConfig = false,
+                configOverrides = mapOf("use_mmap" to true)
             )
             session.load()
             asrSession = session
@@ -105,8 +125,19 @@ object AsrTranscriber {
         }
     }
 
+    private fun scheduleIdleRelease() {
+        idleReleaseJob?.cancel()
+        idleReleaseJob = releaseScope.launch {
+            delay(IDLE_RELEASE_MS)
+            Log.d(TAG, "idle release: freeing ASR session after ${IDLE_RELEASE_MS / 1000}s idle")
+            release()
+        }
+    }
+
     fun release() {
         synchronized(this) {
+            idleReleaseJob?.cancel()
+            idleReleaseJob = null
             asrSession?.release()
             asrSession = null
         }

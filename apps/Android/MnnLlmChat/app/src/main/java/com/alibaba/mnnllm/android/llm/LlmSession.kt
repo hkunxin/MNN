@@ -29,7 +29,11 @@ class LlmSession (
     private val configPath: String,
     var savedHistory: List<ChatDataItem>?,
     var backendType: String? = null,
-    private val useCustomConfig: Boolean = true
+    private val useCustomConfig: Boolean = true,
+    // Spec 001 R3: per-session config overrides applied on top of the loaded model
+    // config (both the app-level ModelConfig used for mmap_dir and the llmConfig
+    // JSON passed to the native engine). Only "use_mmap" is honored.
+    private val configOverrides: Map<String, Any>? = null
 ): ChatSession{
     override var supportOmni: Boolean = false
     private var nativePtr: Long = 0
@@ -76,6 +80,10 @@ class LlmSession (
             ModelConfig.loadDefaultConfig(configPath)!!
         }
         var rootCacheDir: String? = ""
+        val overrideUseMmap = configOverrides?.get("use_mmap") as? Boolean
+        if (overrideUseMmap != null) {
+            config.useMmap = overrideUseMmap
+        }
         if (config.useMmap == true) {
             rootCacheDir = MmapUtils.getMmapDir(modelId)
             File(rootCacheDir).mkdirs()
@@ -93,6 +101,9 @@ class LlmSession (
         // Override backend type from constructor only if not null
         if (backendType != null) {
             llmConfig.backendType = backendType
+        }
+        if (overrideUseMmap != null) {
+            llmConfig.useMmap = overrideUseMmap
         }
         if (isQnn) {
             llmConfig.visualModel = "visual_qnn_${QnnModule.modelMiddleName()}.mnn"
