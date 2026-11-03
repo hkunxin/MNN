@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spec 002 task 8 流式预研: dual-path streaming ASR research screen.
+     Path A = Qwen3-ASR chunked re-inference (engine has no incremental audio API).
+     Path B = sherpa-mnn true streaming (existing AsrService) as contrast. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="流式调研 · 会议记录（Spec002 task8）"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:layout_marginBottom="4dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="A 路：Qwen3-ASR 分块重推理（引擎无增量API，量化延迟/RTF）\nB 路：sherpa-mnn 真流式对照"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:layout_marginBottom="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="A 路分块间隔："
+            android:textSize="14sp" />
+
+        <Spinner
+            android:id="@+id/spinnerChunkInterval"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp">
+
+        <Button
+            android:id="@+id/btnProbeAStart"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="▶ 启动 A 路" />
+
+        <Button
+            android:id="@+id/btnProbeAStop"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="■ 停止 A 路" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:background="#F5F5F5"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/textProbeA"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:textSize="12sp"
+            android:text="（A 路转写输出，逐 chunk 追加）" />
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="4dp">
+
+        <Button
+            android:id="@+id/btnProbeBStart"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="▶ 启动 B 路" />
+
+        <Button
+            android:id="@+id/btnProbeBStop"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="■ 停止 B 路" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:background="#F5F5F5"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/textProbeB"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:textSize="12sp"
+            android:text="（B 路 sherpa 真流式，逐句追加）" />
+    </ScrollView>
+
+    <TextView
+        android:id="@+id/textProbeStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:text="未启动。无重叠切片：chunk 边界可能截断词，为预期研究数据。" />
+
+</LinearLayout>

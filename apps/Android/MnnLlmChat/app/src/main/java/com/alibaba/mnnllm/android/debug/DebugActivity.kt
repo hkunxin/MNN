@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.alibaba.mnnllm.android.R
 import com.alibaba.mnnllm.android.asr.AsrService
+import com.alibaba.mnnllm.android.asr.ChunkedAsrProbe
 import com.alibaba.mnnllm.android.audio.AudioChunksPlayer
 import com.alibaba.mnnllm.android.utils.VoiceModelPathUtils
 import com.alibaba.mnnllm.android.utils.PreferenceUtils
@@ -96,12 +97,17 @@ class DebugActivity : AppCompatActivity() {
 
     private var recognizeService: AsrService? = null
     private var isRecording = false
+
+    // Spec 002 task 8 流式预研: dual-path probe state
+    private var chunkedProbe: ChunkedAsrProbe? = null
+    private var probeBService: AsrService? = null
     private var ttsService: TtsService? = null
     private var audioPlayer: AudioChunksPlayer? = null
     private var isTtsInitialized = false
 
     private val testCases = listOf(
         TestCase("asr", "ASR Test", R.layout.debug_test_asr),
+        TestCase("streamAsr", "Streaming ASR Research", R.layout.debug_test_stream_asr),
         TestCase("tts", "TTS Test", R.layout.debug_test_tts),
         TestCase("scan", "Model Scan Test", R.layout.debug_test_scan),
         TestCase("settings", "Debug Settings", R.layout.debug_test_settings)
@@ -176,6 +182,7 @@ class DebugActivity : AppCompatActivity() {
         // Initialize views for this test case
         when (testCase.id) {
             "asr" -> initAsrViews(view)
+            "streamAsr" -> initStreamAsrViews(view)
             "tts" -> initTtsViews(view)
             "scan" -> initScanViews(view)
             "settings" -> initSettingsViews(view)
@@ -348,6 +355,116 @@ class DebugActivity : AppCompatActivity() {
         } catch (e: Exception) {
             log("Error stopping ASR test: ${e.message}")
             Log.e(TAG, "Error stopping ASR test", e)
+        }
+    }
+
+    // ---- Spec 002 task 8: dual-path streaming ASR research ----
+
+    private var probeATextView: TextView? = null
+    private var probeBTextView: TextView? = null
+    private var probeStatusView: TextView? = null
+    private var probeIntervalSpinner: Spinner? = null
+    private var probeStartedAtMs = 0L
+
+    private fun initStreamAsrViews(parentView: View) {
+        probeATextView = parentView.findViewById(R.id.textProbeA)
+        probeBTextView = parentView.findViewById(R.id.textProbeB)
+        probeStatusView = parentView.findViewById(R.id.textProbeStatus)
+        probeIntervalSpinner = parentView.findViewById(R.id.spinnerChunkInterval)
+
+        val intervals = listOf("3 秒", "5 秒", "10 秒")
+        probeIntervalSpinner?.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_item, intervals
+        ).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        probeIntervalSpinner?.setSelection(1)
+
+        parentView.findViewById<Button>(R.id.btnProbeAStart).setOnClickListener { startProbeA() }
+        parentView.findViewById<Button>(R.id.btnProbeAStop).setOnClickListener { stopProbeA() }
+        parentView.findViewById<Button>(R.id.btnProbeBStart).setOnClickListener { startProbeB() }
+        parentView.findViewById<Button>(R.id.btnProbeBStop).setOnClickListener { stopProbeB() }
+    }
+
+    private fun probeAppend(view: TextView?, line: String) {
+        runOnUiThread {
+            view?.append(line + "\n")
+        }
+    }
+
+    private fun probeStatus(msg: String) {
+        runOnUiThread { probeStatusView?.text = msg }
+    }
+
+    private fun startProbeA() {
+        if (chunkedProbe != null) {
+            log("Path A already running")
+            return
+        }
+        if (!checkRecordAudioPermission()) return
+        val interval = when (probeIntervalSpinner?.selectedItemPosition ?: 1) {
+            0 -> 3; 2 -> 10; else -> 5
+        }
+        probeStartedAtMs = System.currentTimeMillis()
+        probeATextView?.text = ""
+        log("Path A (Qwen3-ASR chunked) starting, interval=${interval}s")
+        chunkedProbe = ChunkedAsrProbe(
+            this, interval,
+            onChunkResult = { index, audioSec, latencyMs, text ->
+                val rtf = if (audioSec > 0) latencyMs / 1000.0 / audioSec else 0.0
+                probeAppend(
+                    probeATextView,
+                    "[#$index ${"%.1f".format(audioSec)}s | ${latencyMs}ms | RTF ${"%.2f".format(rtf)}] $text"
+                )
+                probeStatus("A 路运行中 · 已完成 ${index + 1} 个 chunk · 累计 ${"%.0f".format((System.currentTimeMillis() - probeStartedAtMs) / 1000.0)}s")
+            },
+            onError = { msg -> log("Path A error: $msg") }
+        )
+        chunkedProbe?.start()
+        if (chunkedProbe != null) log("Path A started (interval=${interval}s)")
+    }
+
+    private fun stopProbeA() {
+        val probe = chunkedProbe ?: return
+        val chunks = probe.completedChunks()
+        probe.stop()
+        chunkedProbe = null
+        log("Path A stopped after $chunks chunks")
+    }
+
+    private fun startProbeB() {
+        if (probeBService != null) {
+            log("Path B already running")
+            return
+        }
+        if (!checkRecordAudioPermission()) return
+        CoroutineScope(Dispatchers.Main).launch {
+            try {
+                log("Path B (sherpa-mnn true streaming) starting...")
+                val service = AsrService(this@DebugActivity, null) // dynamic model path
+                withContext(Dispatchers.IO) { service.initRecognizer() }
+                service.onRecognizeText = { text ->
+                    probeAppend(probeBTextView, text)
+                }
+                service.onSpeechDetected = {
+                    // interim signal only; AsrService emits finals per endpoint
+                }
+                service.startRecord()
+                probeBService = service
+                probeBTextView?.text = ""
+                log("Path B started")
+            } catch (e: Exception) {
+                log("Path B failed: ${e.message}")
+                Log.e(TAG, "Path B failed", e)
+            }
+        }
+    }
+
+    private fun stopProbeB() {
+        try {
+            probeBService?.stopRecord()
+            probeBService = null
+            log("Path B stopped")
+        } catch (e: Exception) {
+            log("Error stopping Path B: ${e.message}")
         }
     }
 
@@ -595,5 +712,13 @@ class DebugActivity : AppCompatActivity() {
         super.onDestroy()
         stopAsrTest()
         stopTtsTest()
+        chunkedProbe?.stop()
+        chunkedProbe = null
+        try {
+            probeBService?.stopRecord()
+        } catch (e: Exception) {
+            Log.w(TAG, "probeB stop on destroy", e)
+        }
+        probeBService = null
     }
 }
