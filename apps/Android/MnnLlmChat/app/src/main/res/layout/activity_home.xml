@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Spec-002 V2.1 定稿 IA：三 Tab 主框架（对话/助理/我的） -->
+<!-- Spec-002 V2.1 定稿 IA：三 Tab 主框架（对话/助理/我的），底栏对齐设计稿：白底 + 上边线 + 图标+文字 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?android:attr/colorBackground">
+    android:background="#EEF1F6">
 
     <FrameLayout
         android:id="@+id/homeContainer"
@@ -15,40 +15,87 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1px"
-        android:background="#22000000" />
+        android:background="#E5E8EF" />
 
     <LinearLayout
         android:id="@+id/homeBottomBar"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="64dp"
         android:orientation="horizontal"
-        android:background="?android:attr/colorBackground">
+        android:background="#FFFFFF"
+        android:paddingTop="8dp"
+        android:paddingBottom="12dp">
 
-        <TextView
+        <LinearLayout
             android:id="@+id/tabChat"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
-            android:text="对话"
-            android:textSize="14sp" />
+            android:orientation="vertical"
+            android:gravity="center">
 
-        <TextView
+            <TextView
+                android:id="@+id/tabChatIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="💬"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/tabChatLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="对话"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/tabAssistant"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
-            android:text="助理"
-            android:textSize="14sp" />
+            android:orientation="vertical"
+            android:gravity="center">
 
-        <TextView
+            <TextView
+                android:id="@+id/tabAssistantIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔔"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/tabAssistantLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="助理"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/tabMine"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:gravity="center"
-            android:text="我的"
-            android:textSize="14sp" />
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/tabMineIcon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚙"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/tabMineLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="我的"
+                android:textSize="11sp" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

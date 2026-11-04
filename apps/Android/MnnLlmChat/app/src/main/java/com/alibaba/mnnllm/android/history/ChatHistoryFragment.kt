@@ -20,6 +20,7 @@ import com.alibaba.mnnllm.android.chat.model.SessionItem
 import com.alibaba.mnnllm.android.history.HistoryListAdapter.OnHistoryCallback
 
 class ChatHistoryFragment : Fragment() {
+
     private lateinit var chatListRecyclerView: RecyclerView
     private var textNoHistory: TextView? = null
 
@@ -32,6 +33,9 @@ class ChatHistoryFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val view = inflater.inflate(R.layout.fragment_historylist, container, false)
+        if (arguments?.getBoolean(ARG_HIDE_TITLE, false) == true) {
+            view.findViewById<View>(R.id.history_title)?.visibility = View.GONE
+        }
         chatListRecyclerView = view.findViewById(R.id.chat_history_recycler_view)
         textNoHistory = view.findViewById(R.id.text_no_history)
         chatListRecyclerView.setLayoutManager(
@@ -74,5 +78,8 @@ class ChatHistoryFragment : Fragment() {
 
     companion object {
         const val TAG: String = "ChatHistoryFragment"
+
+        /** V2.1: Tab1 内嵌时隐藏「对话历史」标题（appbar 已承担），MainActivity 等旧宿主不受影响。 */
+        const val ARG_HIDE_TITLE = "hide_title"
     }
 }

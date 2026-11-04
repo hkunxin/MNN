@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="?android:attr/colorBackground">
+    android:background="#EEF1F6">
 
     <TextView
         android:layout_width="match_parent"
@@ -60,6 +60,9 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:background="@drawable/bg_btn_primary"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp"
             android:text="开始" />
 
         <Button
@@ -68,6 +71,9 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="6dp"
+            android:background="@drawable/bg_btn_pill"
+            android:textColor="#3C4457"
+            android:textSize="13sp"
             android:enabled="false"
             android:text="暂停" />
 
@@ -77,6 +83,9 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginStart="6dp"
+            android:background="@drawable/bg_btn_pill"
+            android:textColor="#D93025"
+            android:textSize="13sp"
             android:enabled="false"
             android:text="结束保存" />
     </LinearLayout>
@@ -107,6 +116,10 @@
                 android:id="@+id/meetingTranscript"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:background="@drawable/bg_card_white"
+                android:padding="14dp"
+                android:lineSpacingExtra="3dp"
+                android:textColor="#1B1F27"
                 android:textSize="14sp"
                 android:text="（尚未开始录音）" />
 
@@ -115,6 +128,11 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
+                android:background="@drawable/bg_btn_primary"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:paddingStart="20dp"
+                android:paddingEnd="20dp"
                 android:enabled="false"
                 android:text="生成纪要" />
 

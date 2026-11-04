@@ -29,8 +29,8 @@ class SummaryActivity : AppCompatActivity() {
 
     private lateinit var statusView: TextView
     private lateinit var contentView: TextView
-    private lateinit var generateButton: Button
-    private lateinit var clearButton: Button
+    private lateinit var generateButton: TextView
+    private lateinit var clearButton: TextView
 
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
 

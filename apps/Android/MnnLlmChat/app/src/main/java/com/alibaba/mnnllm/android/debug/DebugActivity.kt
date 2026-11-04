@@ -717,10 +717,21 @@ class DebugActivity : AppCompatActivity() {
     private fun initNotifyViews(parentView: View) {
         notifyStatusText = parentView.findViewById(R.id.notifyStatusText)
         parentView.findViewById<Button>(R.id.notifyAccessButton).setOnClickListener {
-            try {
-                startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-            } catch (e: Exception) {
-                log("无法打开通知使用权设置: ${e.message}")
+            // 已授权但未连接时先强绑（覆盖安装会掉绑定），否则直接跳系统设置。
+            val acc = com.alibaba.mnnllm.android.assistant.notify.NotificationAccess
+            if (acc.isGranted(this) &&
+                !com.alibaba.mnnllm.android.assistant.notify.SmartNotificationListener.isConnected()
+            ) {
+                val did = acc.ensureBound(this)
+                log(if (did) "已发起重新绑定(listener rebind)，2s 后看 listener bound"
+                    else "刚发起过绑定，请稍等或手动重启设备")
+                parentView.postDelayed({ refreshNotifyStatus() }, 2000)
+            } else {
+                try {
+                    startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                } catch (e: Exception) {
+                    log("无法打开通知使用权设置: ${e.message}")
+                }
             }
         }
         parentView.findViewById<Button>(R.id.notifyRefreshButton).setOnClickListener {
@@ -785,6 +796,13 @@ class DebugActivity : AppCompatActivity() {
         val sb = StringBuilder()
         sb.append("listener bound: ").append(
             com.alibaba.mnnllm.android.assistant.notify.SmartNotificationListener.isConnected())
+        // 授权 ≠ 已绑定：覆盖安装 APK 会掉绑定但设置里的开关仍是开的，
+        // 这是「明明授权了却一条通知都收不到」的最常见根因。
+        val granted = com.alibaba.mnnllm.android.assistant.notify.NotificationAccess.isGranted(this)
+        sb.append("   granted: ").append(granted)
+        if (granted && !com.alibaba.mnnllm.android.assistant.notify.SmartNotificationListener.isConnected()) {
+            sb.append("\n⚠ 已授权但监听器未绑定 —— 点上面「通知使用权」按钮会强制重绑")
+        }
         sb.append("\n\nlogcat 过滤:  adb logcat -s SmartNotify\n")
         sb.append("\n规则 (assistant_notify_prefs):\n")
         try {

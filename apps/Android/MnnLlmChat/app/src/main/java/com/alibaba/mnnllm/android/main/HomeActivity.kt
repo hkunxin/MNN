@@ -2,10 +2,13 @@
 //   Tab1 对话：会话列表 → 对话页（会议记录入口在 Tab1，不计 Tab）
 //   Tab2 助理：通知摘要 → 规则建议 / 拦截动态 / 助理设置
 //   Tab3 我的：设置主页（模型管理收进二级：设置里「模型管理」行 → 旧模型列表页）
+// 底栏对齐设计稿：图标+文字，选中 accent #1A73E8 加粗、图标放大。
 package com.alibaba.mnnllm.android.main
 
 import android.os.Bundle
 import android.graphics.Typeface
+import android.view.View
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -15,22 +18,22 @@ import com.alibaba.mnnllm.android.mainsettings.MainSettingsFragment
 
 class HomeActivity : AppCompatActivity() {
 
-    private lateinit var tabChat: TextView
-    private lateinit var tabAssistant: TextView
-    private lateinit var tabMine: TextView
+    private lateinit var tabs: List<Pair<LinearLayout, Pair<TextView, TextView>>>
 
     private var currentTab = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
-        tabChat = findViewById(R.id.tabChat)
-        tabAssistant = findViewById(R.id.tabAssistant)
-        tabMine = findViewById(R.id.tabMine)
-
-        tabChat.setOnClickListener { switchTab(0) }
-        tabAssistant.setOnClickListener { switchTab(1) }
-        tabMine.setOnClickListener { switchTab(2) }
+        tabs = listOf(
+            findViewById<LinearLayout>(R.id.tabChat) to
+                (findViewById<TextView>(R.id.tabChatIcon) to findViewById<TextView>(R.id.tabChatLabel)),
+            findViewById<LinearLayout>(R.id.tabAssistant) to
+                (findViewById<TextView>(R.id.tabAssistantIcon) to findViewById<TextView>(R.id.tabAssistantLabel)),
+            findViewById<LinearLayout>(R.id.tabMine) to
+                (findViewById<TextView>(R.id.tabMineIcon) to findViewById<TextView>(R.id.tabMineLabel))
+        )
+        tabs.forEachIndexed { index, (bar, _) -> bar.setOnClickListener { switchTab(index) } }
 
         if (savedInstanceState == null) {
             switchTab(0)
@@ -77,16 +80,16 @@ class HomeActivity : AppCompatActivity() {
     }
 
     private fun highlight(index: Int) {
-        val active = 0xFF1565C0.toInt()
-        val inactive = 0xFF888888.toInt()
-        tabChat.setTextColor(if (index == 0) active else inactive)
-        tabAssistant.setTextColor(if (index == 1) active else inactive)
-        tabMine.setTextColor(if (index == 2) active else inactive)
-        val bold = Typeface.DEFAULT_BOLD
-        val normal = Typeface.DEFAULT
-        tabChat.typeface = if (index == 0) bold else normal
-        tabAssistant.typeface = if (index == 1) bold else normal
-        tabMine.typeface = if (index == 2) bold else normal
+        val active = 0xFF1A73E8.toInt()
+        val inactive = 0xFF6B7280.toInt()
+        tabs.forEachIndexed { i, (_, icons) ->
+            val (icon, label) = icons
+            val on = i == index
+            label.setTextColor(if (on) active else inactive)
+            label.typeface = if (on) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            icon.animate().scaleX(if (on) 1.12f else 1f).scaleY(if (on) 1.12f else 1f)
+                .setDuration(150).start()
+        }
     }
 
     companion object {

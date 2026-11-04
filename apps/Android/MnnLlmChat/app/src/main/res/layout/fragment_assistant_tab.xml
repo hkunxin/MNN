@@ -1,233 +1,293 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- V2.1 Tab2 助理：通知摘要 + 规则建议 + 拦截动态 + 助理设置（判定模型/阈值/仅亮屏锁定项） -->
+<!-- V2.1 Tab2 助理 · 对齐 ui-design.html 屏3：appbar + 状态 chips + 分类摘要卡片 + 入口卡 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:background="#EEF1F6">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingBottom="24dp">
+        android:paddingBottom="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingStart="16dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="4dp"
-            android:text="助理"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <!-- 通知摘要 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingStart="16dp"
-            android:paddingTop="8dp"
-            android:text="通知摘要"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="#666666" />
-
+        <!-- appbar -->
         <LinearLayout
-            android:id="@+id/cardSummary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="6dp"
-            android:orientation="vertical"
-            android:padding="14dp"
-            android:background="#14000000">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="10dp">
 
             <TextView
-                android:id="@+id/assistantSummaryPreview"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:maxLines="4"
-                android:ellipsize="end"
-                android:textSize="13sp"
-                android:text="（尚无摘要，进入后点「生成摘要」）" />
+                android:layout_weight="1"
+                android:text="通知助理"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#1B1F27" />
 
             <TextView
-                android:id="@+id/btnOpenSummary"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:paddingTop="8dp"
-                android:text="打开摘要页 ›"
-                android:textColor="#1E88E5"
-                android:textSize="13sp" />
+                android:id="@+id/btnAssistantSettings"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:gravity="center"
+                android:text="⚙"
+                android:textSize="17sp"
+                android:textColor="#6B7280"
+                android:background="@drawable/bg_chip" />
         </LinearLayout>
 
-        <!-- 功能入口 -->
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- 状态 chips -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:paddingStart="16dp"
-            android:paddingTop="14dp"
-            android:text="屏蔽与规则"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="#666666" />
+            android:paddingEnd="16dp"
+            android:paddingBottom="8dp">
 
+            <TextView
+                android:id="@+id/chipLastSummary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_chip"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:text="上次总结 —"
+                android:textSize="11sp"
+                android:textColor="#6B7280" />
+
+            <TextView
+                android:id="@+id/chipQueue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_chip_blue"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:text="待判队列 0 条"
+                android:textSize="11sp"
+                android:textColor="#1A73E8"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/bg_chip"
+                android:paddingStart="11dp"
+                android:paddingEnd="11dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:text="息屏 0 推理"
+                android:textSize="11sp"
+                android:textColor="#6B7280" />
+        </LinearLayout>
+
+        <!-- 摘要分类卡片容器（AssistantTabFragment 动态填充分类卡） -->
+        <LinearLayout
+            android:id="@+id/summaryCardsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+
+        <!-- 空摘要占位 -->
+        <LinearLayout
+            android:id="@+id/summaryEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@drawable/bg_card_white"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔔"
+                android:textSize="22sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="尚无通知摘要"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="#1B1F27" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="亮屏进入摘要页点「生成摘要」，批量识别后的通知将分类罗列在此"
+                android:textSize="12sp"
+                android:textColor="#6B7280"
+                android:lineSpacingExtra="2dp" />
+        </LinearLayout>
+
+        <!-- 屏蔽与规则入口卡 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="12dp"
             android:orientation="vertical"
-            android:background="#14000000">
+            android:background="@drawable/bg_card_white">
 
-            <TextView
+            <LinearLayout
                 android:id="@+id/btnRuleSuggestions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="14dp"
-                android:minHeight="48dp"
+                android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:text="规则建议"
-                android:textSize="15sp" />
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🛡"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:text="屏蔽规则建议"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#1B1F27" />
+
+                <TextView
+                    android:id="@+id/badgeRulePending"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="#FDF3DC"
+                    android:paddingStart="9dp"
+                    android:paddingEnd="9dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:text="2 条待确认"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="#B06000"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="›"
+                    android:textSize="15sp"
+                    android:textColor="#C3C9D6" />
+            </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1px"
-                android:background="#22000000" />
+                android:layout_marginStart="14dp"
+                android:background="#F0F2F7" />
 
-            <TextView
+            <LinearLayout
                 android:id="@+id/btnBlockLog"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="14dp"
-                android:minHeight="48dp"
+                android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:text="拦截动态"
-                android:textSize="15sp" />
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="📋"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:text="拦截与学习动态"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#1B1F27" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textSize="15sp"
+                    android:textColor="#C3C9D6" />
+            </LinearLayout>
 
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1px"
-                android:background="#22000000" />
+                android:layout_marginStart="14dp"
+                android:background="#F0F2F7" />
 
-            <TextView
+            <LinearLayout
                 android:id="@+id/btnNotifyAccess"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="14dp"
-                android:minHeight="48dp"
+                android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:text="通知使用权：检测中…"
-                android:textSize="15sp" />
-        </LinearLayout>
-
-        <!-- 助理设置 -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingStart="16dp"
-            android:paddingTop="14dp"
-            android:text="助理设置"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="#666666" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="6dp"
-            android:orientation="vertical"
-            android:background="#14000000">
-
-            <LinearLayout
-                android:id="@+id/rowJudgeModel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="14dp"
-                android:minHeight="48dp"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="判定 / 摘要 / 纪要模型"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/judgeModelValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:maxWidth="180dp"
-                    android:ellipsize="start"
-                    android:singleLine="true"
-                    android:textSize="12sp"
-                    android:textColor="#888888"
-                    android:text="未设置" />
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1px"
-                android:background="#22000000" />
-
-            <LinearLayout
-                android:id="@+id/rowAutoThreshold"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="14dp"
-                android:minHeight="48dp"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="高置信自动屏蔽阈值"
-                    android:textSize="15sp" />
-
-                <TextView
-                    android:id="@+id/autoThresholdValue"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="12sp"
-                    android:textColor="#888888"
-                    android:text="0.90" />
-            </LinearLayout>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1px"
-                android:background="#22000000" />
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:padding="14dp"
-                android:minHeight="48dp"
-                android:gravity="center_vertical">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="仅亮屏处理（省电策略）"
-                    android:textSize="15sp" />
+                android:paddingStart="14dp"
+                android:paddingEnd="14dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="12dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="已锁定"
-                    android:textSize="12sp"
-                    android:textColor="#888888" />
+                    android:text="🔑"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/notifyAccessLabel"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:text="通知使用权：检测中…"
+                    android:textSize="14sp"
+                    android:textColor="#1B1F27" />
+
+                <TextView
+                    android:id="@+id/badgeNotifyAccess"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="#E6F4EA"
+                    android:paddingStart="9dp"
+                    android:paddingEnd="9dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:text="已连接"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="#188038" />
             </LinearLayout>
         </LinearLayout>
 
@@ -236,9 +296,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:padding="12dp"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
             android:text="Debug 面板 ›"
-            android:textColor="#888888"
+            android:textColor="#9AA3B2"
             android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>
