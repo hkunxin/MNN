@@ -37,6 +37,12 @@
             android:text="清空摘要库" />
     </LinearLayout>
 
+    <Button
+        android:id="@+id/notifyRunBatchButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="手动触发批处理(强制,验证门控)" />
+
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"

@@ -746,6 +746,15 @@ class DebugActivity : AppCompatActivity() {
                 log("清空摘要库失败: ${e.message}")
             }
         }
+        parentView.findViewById<Button>(R.id.notifyRunBatchButton).setOnClickListener {
+            try {
+                com.alibaba.mnnllm.android.assistant.notify.InferenceScheduler.tryRun(this, "forced")
+                log("批处理已触发(强制): adb logcat -s SmartNotify 看 batch done/gated")
+            } catch (e: Exception) {
+                log("触发失败: ${e.message}")
+            }
+            refreshNotifyStatus()
+        }
         refreshNotifyStatus()
     }
 
@@ -786,7 +795,11 @@ class DebugActivity : AppCompatActivity() {
                     .append(it.title?.take(30)).append(" | ")
                     .append(it.text?.take(40))
             }
-            sb.append("\n\n存储: filesDir/assistant_pending_queue.json, assistant_digest.json")
+            sb.append("\n\n存储: filesDir/assistant_pending_queue.json, assistant_digest.json\n")
+            sb.append("调度: ").append(
+                com.alibaba.mnnllm.android.assistant.notify.InferenceScheduler.statusLine(this))
+                .append("\n执行器: ").append(
+                com.alibaba.mnnllm.android.assistant.notify.InferenceScheduler.executorName())
         } catch (e: Exception) {
             sb.append("\n存储读取失败: ").append(e.message)
         }

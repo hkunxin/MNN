@@ -175,6 +175,10 @@
             </intent-filter>
         </service>
 
+        <receiver
+            android:name="com.alibaba.mnnllm.android.assistant.notify.InferenceScheduler$InferenceSchedulerReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>

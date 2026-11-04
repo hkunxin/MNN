@@ -70,6 +70,7 @@ public final class SmartNotificationListener extends NotificationListenerService
         blockLogStore = new BlockLogStore(this);
         pendingQueue = new PendingQueueStore(this);
         digestStore = new DigestStore(this);
+        InferenceScheduler.start(this, pendingQueue);
         connected = true;
         Log.i(TAG, "listener connected — assistant notify chain active");
     }
@@ -84,6 +85,7 @@ public final class SmartNotificationListener extends NotificationListenerService
     @Override
     public void onDestroy() {
         connected = false;
+        InferenceScheduler.stop(this);
         AssistantNotifyConfig cfg = config;
         if (cfg != null) {
             cfg.close();
