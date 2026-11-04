@@ -32,6 +32,7 @@ import com.alibaba.mnnllm.android.asr.ChunkedAsrProbe
 import com.alibaba.mnnllm.android.audio.AudioChunksPlayer
 import com.alibaba.mnnllm.android.utils.VoiceModelPathUtils
 import com.alibaba.mnnllm.android.utils.PreferenceUtils
+import com.alibaba.mnnllm.android.utils.SystemBarInsets
 import com.alibaba.mnnllm.android.BuildConfig
 import com.alibaba.mnnllm.android.modelist.ModelListManager
 import com.google.firebase.crashlytics.FirebaseCrashlytics
@@ -119,6 +120,8 @@ class DebugActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_debug)
+        // targetSdk 35：Android 15 强制 edge-to-edge，需显式避让状态栏/导航栏
+        SystemBarInsets.applyPadding(this)
 
         initViews()
         setupSpinner()

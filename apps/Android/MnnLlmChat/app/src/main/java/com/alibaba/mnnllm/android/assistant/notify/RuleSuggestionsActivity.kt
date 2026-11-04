@@ -11,6 +11,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.alibaba.mnnllm.android.R
+import com.alibaba.mnnllm.android.utils.SystemBarInsets
 
 class RuleSuggestionsActivity : AppCompatActivity() {
 
@@ -20,6 +21,8 @@ class RuleSuggestionsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_rule_suggestions)
+        // targetSdk 35：Android 15 强制 edge-to-edge，需显式避让状态栏/导航栏
+        SystemBarInsets.applyPadding(this)
         store = LearnedRuleStore(this)
         listContainer = findViewById(R.id.ruleListContainer)
     }

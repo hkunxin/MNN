@@ -11,10 +11,14 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import com.alibaba.mnnllm.android.R
 import com.alibaba.mnnllm.android.assistant.notify.AssistantTabFragment
 import com.alibaba.mnnllm.android.mainsettings.MainSettingsFragment
+import com.alibaba.mnnllm.android.utils.SystemBarInsets
 
 class HomeActivity : AppCompatActivity() {
 
@@ -25,6 +29,7 @@ class HomeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
+        applySystemBarInsets()
         tabs = listOf(
             findViewById<LinearLayout>(R.id.tabChat) to
                 (findViewById<TextView>(R.id.tabChatIcon) to findViewById<TextView>(R.id.tabChatLabel)),
@@ -47,6 +52,39 @@ class HomeActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(KEY_TAB, currentTab)
+    }
+
+    /**
+     * targetSdk 35 起 Android 15 强制 edge-to-edge，三 Tab 内容会直接画进状态栏/导航栏区域。
+     * 统一在壳子层吃掉系统栏 inset：
+     *  - 状态栏高度 → 内容区 paddingTop（appbar 下移，不再被状态栏压住）
+     *  - 导航栏高度 → 底栏增高 + 底部内边距（白底延伸到手势条下方，Tab 文案不被挡）
+     *  - 刘海/挖孔/横屏 → 根布局左右内边距
+     * 各 Tab fragment 自身不再处理 inset，避免二次叠加。
+     */
+    private fun applySystemBarInsets() {
+        val root = findViewById<View>(R.id.homeRoot)
+        val content = findViewById<View>(R.id.homeContainer)
+        val bottomBar = findViewById<View>(R.id.homeBottomBar)
+        val barBaseHeight = bottomBar.layoutParams.height
+        val barBasePaddingBottom = bottomBar.paddingBottom
+
+        // edge-to-edge + 系统栏图标明暗统一走工具类，避免和二级页各写一份
+        SystemBarInsets.enableEdgeToEdge(this, root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            root.updatePadding(left = bars.left, right = bars.right)
+            content.updatePadding(top = bars.top)
+            bottomBar.layoutParams = bottomBar.layoutParams.apply {
+                height = barBaseHeight + bars.bottom
+            }
+            bottomBar.updatePadding(bottom = barBasePaddingBottom + bars.bottom)
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
     }
 
     private fun switchTab(index: Int) {

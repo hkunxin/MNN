@@ -21,6 +21,7 @@ import androidx.core.content.ContextCompat
 import com.alibaba.mnnllm.android.R
 import com.alibaba.mnnllm.android.assistant.notify.AssistantLlmClient
 import com.alibaba.mnnllm.android.assistant.notify.AssistantNotifyConfig
+import com.alibaba.mnnllm.android.utils.SystemBarInsets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -64,6 +65,8 @@ class MeetingActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_meeting)
+        // targetSdk 35：Android 15 强制 edge-to-edge，需显式避让状态栏/导航栏/键盘
+        SystemBarInsets.applyPadding(this)
         titleEdit = findViewById(R.id.meetingTitleEdit)
         timerView = findViewById(R.id.meetingTimer)
         stateView = findViewById(R.id.meetingStateText)

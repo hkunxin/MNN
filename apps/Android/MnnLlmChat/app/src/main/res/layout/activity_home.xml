@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Spec-002 V2.1 定稿 IA：三 Tab 主框架（对话/助理/我的），底栏对齐设计稿：白底 + 上边线 + 图标+文字 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/homeRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"

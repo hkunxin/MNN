@@ -11,6 +11,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.alibaba.mnnllm.android.R
+import com.alibaba.mnnllm.android.utils.SystemBarInsets
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -37,6 +38,8 @@ class SummaryActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_summary)
+        // targetSdk 35：Android 15 强制 edge-to-edge，需显式避让状态栏/导航栏
+        SystemBarInsets.applyPadding(this)
         statusView = findViewById(R.id.summaryStatus)
         contentView = findViewById(R.id.summaryContent)
         generateButton = findViewById(R.id.btnGenerateSummary)

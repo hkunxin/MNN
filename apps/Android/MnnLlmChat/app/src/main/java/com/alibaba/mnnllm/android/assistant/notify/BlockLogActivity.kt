@@ -10,6 +10,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.alibaba.mnnllm.android.R
+import com.alibaba.mnnllm.android.utils.SystemBarInsets
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -21,6 +22,8 @@ class BlockLogActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_block_log)
+        // targetSdk 35：Android 15 强制 edge-to-edge，需显式避让状态栏/导航栏
+        SystemBarInsets.applyPadding(this)
         container = findViewById(R.id.blockLogContainer)
         findViewById<TextView>(R.id.blockLogBack).setOnClickListener { finish() }
         findViewById<TextView>(R.id.blockLogClear).setOnClickListener {
