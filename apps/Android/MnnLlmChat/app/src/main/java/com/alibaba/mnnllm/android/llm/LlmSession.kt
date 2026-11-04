@@ -311,15 +311,13 @@ class LlmSession (
      */
     fun applySystemPromptExtra(extra: String?) {
         val block = extra?.takeIf { it.isNotBlank() }
-        if (block == systemPromptExtra) {
-            Log.d(TAG, "system prompt extra unchanged, skip")
-            return
-        }
         systemPromptExtra = block
         if (nativePtr == 0L) {
             Log.d(TAG, "system prompt extra stored for next load, chars=${block?.length ?: 0}")
             return
         }
+        // 不比对旧值直接覆盖：base 每次都从磁盘配置重读，用户在模型设置里改过的 prompt
+        // 也能带上；幂等性由「全量覆盖」而非「跳过」保证，不会累积多份记忆。
         val base = runCatching {
             ModelConfig.loadMergedConfig(configPath, getExtraConfigFile(modelId))?.systemPrompt
         }.getOrNull()
