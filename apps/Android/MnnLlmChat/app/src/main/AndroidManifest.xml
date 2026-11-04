@@ -77,14 +77,21 @@
             android:theme="@style/AppTheme"
             android:configChanges="orientation|screenSize" />
 
+        <!-- Spec-002 V2.1 定稿：三 Tab 主框架（对话/助理/我的）为应用入口。 -->
         <activity
-            android:name=".main.MainActivity"
+            android:name="com.alibaba.mnnllm.android.main.HomeActivity"
             android:configChanges="orientation|screenSize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".main.MainActivity"
+            android:configChanges="orientation|screenSize"
+            android:exported="false">
         </activity>
 
         <activity
@@ -198,6 +205,10 @@
             android:name="com.alibaba.mnnllm.android.assistant.notify.SummaryActivity"
             android:exported="false"
             android:label="通知摘要" />
+        <activity
+            android:name="com.alibaba.mnnllm.android.assistant.notify.BlockLogActivity"
+            android:exported="false"
+            android:label="拦截动态" />
         <activity
             android:name="com.alibaba.mnnllm.android.assistant.notify.meeting.MeetingActivity"
             android:exported="false"

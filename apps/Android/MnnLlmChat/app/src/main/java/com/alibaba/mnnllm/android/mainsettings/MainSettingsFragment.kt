@@ -84,6 +84,7 @@ class MainSettingsFragment : Fragment() {
         setupDownloadProvider(sharedPreferences)
         setupVoiceModelManagement()
         setupStorageManagement()
+        setupModelManagement()
 
         binding.itemEnableApi.isChecked = MainSettings.isApiServiceEnabled(requireContext())
         binding.itemEnableApi.setOnCheckedChangeListener { isChecked ->
@@ -148,6 +149,13 @@ class MainSettingsFragment : Fragment() {
     private fun setupStorageManagement() {
         binding.btnStorageManagement.setOnClickListener {
             startActivity(Intent(requireContext(), StorageManagementActivity::class.java))
+        }
+    }
+
+    /** V2.1 定稿：模型管理收进「我的」二级（模型下载/本地导入在其内部继续下沉三级）。 */
+    private fun setupModelManagement() {
+        binding.btnModelManagement.setOnClickListener {
+            startActivity(Intent(requireContext(), com.alibaba.mnnllm.android.main.MainActivity::class.java))
         }
     }
 

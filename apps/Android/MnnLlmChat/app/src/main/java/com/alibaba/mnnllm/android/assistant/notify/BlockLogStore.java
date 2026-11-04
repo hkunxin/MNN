@@ -30,14 +30,16 @@ public final class BlockLogStore {
     private static final int MAX_TEXT_LEN = 500;
 
     /** One dropped notification detail entry. */
-    static final class Entry {
-        final long time;
-        final String title;
-        final String text;
-        final String rule;
+    public static final class Entry {
+        public final long time;
+        public final String pkg;
+        public final String title;
+        public final String text;
+        public final String rule;
 
-        Entry(long time, String title, String text, String rule) {
+        Entry(long time, String pkg, String title, String text, String rule) {
             this.time = time;
+            this.pkg = pkg;
             this.title = title;
             this.text = text;
             this.rule = rule;
@@ -71,7 +73,7 @@ public final class BlockLogStore {
         if (list == null) {
             list = new ArrayList<>();
         }
-        list.add(new Entry(System.currentTimeMillis(), clip(title), clip(text), clip(rule)));
+        list.add(new Entry(System.currentTimeMillis(), key, clip(title), clip(text), clip(rule)));
         while (list.size() > MAX_PER_APP) {
             list.remove(0);
         }
@@ -122,6 +124,20 @@ public final class BlockLogStore {
         List<Entry> list = all.get(pkg);
         List<Entry> out = new ArrayList<>(list == null ? new ArrayList<>() : list);
         Collections.reverse(out); // stored oldest-first => show newest-first
+        return out;
+    }
+
+    /**
+     * All entries across apps, newest first (task 6/V2.1 拦截动态页 timeline,
+     * also the task 10 on-device audit surface).
+     */
+    public static List<Entry> readAll(Context context) {
+        Map<String, List<Entry>> all = parse(readNormal(fileFor(context)));
+        List<Entry> out = new ArrayList<>();
+        for (List<Entry> list : all.values()) {
+            out.addAll(list);
+        }
+        out.sort((a, b) -> Long.compare(b.time, a.time));
         return out;
     }
 
@@ -195,7 +211,7 @@ public final class BlockLogStore {
                 for (int i = 0; i < arr.length(); i++) {
                     JSONObject o = arr.optJSONObject(i);
                     if (o != null) {
-                        list.add(new Entry(o.optLong("t", 0L),
+                        list.add(new Entry(o.optLong("t", 0L), pkg,
                                 o.optString("ti", ""), o.optString("tx", ""), o.optString("r", "")));
                     }
                 }
