@@ -48,6 +48,33 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal">
 
+        <Button
+            android:id="@+id/notifyOpenSummaryButton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="摘要页" />
+
+        <Button
+            android:id="@+id/notifyOpenRulesButton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="规则建议" />
+
+        <Button
+            android:id="@+id/notifyOpenMeetingButton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="会议记录" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
         <EditText
             android:id="@+id/notifyJudgeModelEdit"
             android:layout_width="0dp"

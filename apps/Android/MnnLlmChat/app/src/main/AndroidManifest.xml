@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Spec-002 task 9: meeting-record foreground service (mic type). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -185,6 +188,24 @@
             android:name="com.alibaba.mnnllm.android.assistant.notify.AssistantJudgeService"
             android:exported="false"
             android:process=":llm" />
+
+        <!-- Spec-002 tasks 6/7/9: assistant feature screens. -->
+        <activity
+            android:name="com.alibaba.mnnllm.android.assistant.notify.RuleSuggestionsActivity"
+            android:exported="false"
+            android:label="规则建议" />
+        <activity
+            android:name="com.alibaba.mnnllm.android.assistant.notify.SummaryActivity"
+            android:exported="false"
+            android:label="通知摘要" />
+        <activity
+            android:name="com.alibaba.mnnllm.android.assistant.notify.meeting.MeetingActivity"
+            android:exported="false"
+            android:label="会议记录" />
+        <service
+            android:name="com.alibaba.mnnllm.android.assistant.notify.meeting.MeetingRecordService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
     </application>
 

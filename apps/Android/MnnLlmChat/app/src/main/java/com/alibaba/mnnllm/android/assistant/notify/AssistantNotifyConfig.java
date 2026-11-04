@@ -36,6 +36,8 @@ public final class AssistantNotifyConfig {
     static final String KEY_APP_WHITELIST = "app_whitelist";
     static final String KEY_JUDGE_MODEL_ID = "judge_model_id";
     static final String KEY_AD_CONF_THRESHOLD = "ad_conf_threshold";
+    /** Task 6: LLM candidate rules at/above this confidence auto-confirm silently. */
+    static final String KEY_RULE_AUTO_THRESHOLD = "rule_auto_confirm_threshold";
 
     private final SharedPreferences prefs;
     private final SharedPreferences.OnSharedPreferenceChangeListener listener =
@@ -43,6 +45,7 @@ public final class AssistantNotifyConfig {
 
     private volatile RuleMatcher channelMatcher = RuleMatcher.compile(null, null);
     private volatile RuleMatcher contentMatcher = RuleMatcher.compileContent(null, null);
+    private volatile RuleMatcher allowMatcher = RuleMatcher.compileContent(null, null);
     private volatile boolean masterEnabled = true;
     private volatile boolean matchDescription = true;
     private volatile boolean contentEnabled = false;
@@ -73,6 +76,9 @@ public final class AssistantNotifyConfig {
         // Content engine reuses the SAME allow whitelist but not the built-in
         // default rule, same as mnblocker.
         contentMatcher = RuleMatcher.compileContent(contentRaw, allowRaw);
+        // Task 6 allow-priority regression: learned block rules must never win
+        // over a user allow rule, so the learned gate consults this matcher.
+        allowMatcher = RuleMatcher.compileContent(null, allowRaw);
 
         appWhitelist.clear();
         appWhitelist.addAll(splitLines(prefs.getString(KEY_APP_WHITELIST, "")));
@@ -145,6 +151,11 @@ public final class AssistantNotifyConfig {
         return contentMatcher;
     }
 
+    /** Task 6: allow-only matcher (empty block set) so learned rules can defer to it. */
+    RuleMatcher allowMatcher() {
+        return allowMatcher;
+    }
+
     /** Task 4: which installed chat model judges batches (user-selectable). */
     public static String judgeModelIdStatic(Context context) {
         return context.getApplicationContext()
@@ -169,5 +180,18 @@ public final class AssistantNotifyConfig {
         context.getApplicationContext()
                 .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit().putFloat(KEY_AD_CONF_THRESHOLD, (float) v).apply();
+    }
+
+    /** Task 6: candidate rules at/above this confidence become instant rules silently. */
+    public static double ruleAutoConfirmThresholdStatic(Context context) {
+        return (double) context.getApplicationContext()
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getFloat(KEY_RULE_AUTO_THRESHOLD, 0.9f);
+    }
+
+    public static void setRuleAutoConfirmThreshold(Context context, double v) {
+        context.getApplicationContext()
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putFloat(KEY_RULE_AUTO_THRESHOLD, (float) v).apply();
     }
 }

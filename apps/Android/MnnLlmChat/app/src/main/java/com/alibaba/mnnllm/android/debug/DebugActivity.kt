@@ -755,6 +755,18 @@ class DebugActivity : AppCompatActivity() {
             }
             refreshNotifyStatus()
         }
+        parentView.findViewById<Button>(R.id.notifyOpenSummaryButton).setOnClickListener {
+            startActivity(Intent(this,
+                com.alibaba.mnnllm.android.assistant.notify.SummaryActivity::class.java))
+        }
+        parentView.findViewById<Button>(R.id.notifyOpenRulesButton).setOnClickListener {
+            startActivity(Intent(this,
+                com.alibaba.mnnllm.android.assistant.notify.RuleSuggestionsActivity::class.java))
+        }
+        parentView.findViewById<Button>(R.id.notifyOpenMeetingButton).setOnClickListener {
+            startActivity(Intent(this,
+                com.alibaba.mnnllm.android.assistant.notify.meeting.MeetingActivity::class.java))
+        }
         parentView.findViewById<Button>(R.id.notifyJudgeModelSetButton).setOnClickListener {
             val v = parentView.findViewById<EditText>(R.id.notifyJudgeModelEdit).text.toString().trim()
             if (v.isEmpty()) {
@@ -813,6 +825,12 @@ class DebugActivity : AppCompatActivity() {
                 .append("\n判定模型: ").append(
                 com.alibaba.mnnllm.android.assistant.notify.AssistantNotifyConfig.judgeModelIdStatic(this)
                     ?.ifEmpty { "(未设置)" })
+            run {
+                val lr = com.alibaba.mnnllm.android.assistant.notify.LearnedRuleStore(this)
+                sb.append("\n学习规则: 待确认=").append(lr.pending().size)
+                    .append(" 已生效=").append(lr.confirmed().size)
+                    .append(" (filesDir/assistant_learned_rules.json)")
+            }
         } catch (e: Exception) {
             sb.append("\n存储读取失败: ").append(e.message)
         }

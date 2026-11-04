@@ -52,6 +52,7 @@ public final class SmartNotificationListener extends NotificationListenerService
     private BlockLogStore blockLogStore;
     private PendingQueueStore pendingQueue;
     private DigestStore digestStore;
+    private LearnedRuleStore learnedRules;
 
     /** @return true while the system has this listener bound and delivering. */
     public static boolean isConnected() {
@@ -91,9 +92,10 @@ public final class SmartNotificationListener extends NotificationListenerService
         blockLogStore = new BlockLogStore(this);
         pendingQueue = new PendingQueueStore(this);
         digestStore = new DigestStore(this);
+        learnedRules = new LearnedRuleStore(this);
         instance = this;
         InferenceScheduler.start(this, pendingQueue);
-        LlmJudgeExecutor.attach(this, digestStore, blockLogStore);
+        LlmJudgeExecutor.attach(this, digestStore, blockLogStore, learnedRules);
         connected = true;
         Log.i(TAG, "listener connected — assistant notify chain active");
     }
@@ -203,11 +205,25 @@ public final class SmartNotificationListener extends NotificationListenerService
                 // R1: no-match -> persistent queue for batched LLM judgment
                 // (task 3 scheduler drains it; zero inference on this path).
                 // The sbn key is kept so a later ad verdict can cancel it.
+                String title = extractField(n, Notification.EXTRA_TITLE);
+                String body = firstNonEmpty(new String[]{
+                        extractField(n, Notification.EXTRA_TEXT),
+                        extractField(n, Notification.EXTRA_BIG_TEXT)});
+
+                // Task 6: a CONFIRMED learned rule short-circuits the LLM —
+                // instant regex cancel, zero inference. Allow rules win inside
+                // firstMatch (mnblocker regression guard).
+                String learned = learnedRules == null ? null
+                        : learnedRules.firstMatch(cfg, pkg, title, body);
+                if (learned != null) {
+                    cancelNotification(sbn.getKey());
+                    blockLogStore.record(pkg, title, body, "learned-rule: " + learned);
+                    Log.i(TAG, "pkg=" + pkg + " key=" + sbn.getKey() + " CANCELLED"
+                            + " level=learned reason=" + learned);
+                    return;
+                }
+
                 if (pendingQueue != null) {
-                    String title = extractField(n, Notification.EXTRA_TITLE);
-                    String body = firstNonEmpty(new String[]{
-                            extractField(n, Notification.EXTRA_TEXT),
-                            extractField(n, Notification.EXTRA_BIG_TEXT)});
                     pendingQueue.enqueue(new PendingQueueStore.Item(
                             sbn.getKey(), pkg, title, body, sbn.getPostTime()));
                     Log.d(TAG, "pkg=" + pkg + " key=" + sbn.getKey() + " allow (no-match)"

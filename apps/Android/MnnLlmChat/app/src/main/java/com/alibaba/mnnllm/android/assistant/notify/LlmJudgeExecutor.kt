@@ -1,7 +1,6 @@
 package com.alibaba.mnnllm.android.assistant.notify
 
 import android.content.Context
-import android.content.Intent
 import android.util.Log
 import org.json.JSONArray
 import org.json.JSONObject
@@ -30,7 +29,8 @@ import kotlin.concurrent.thread
 class LlmJudgeExecutor private constructor(
         private val appContext: Context,
         private val digestStore: DigestStore,
-        private val blockLogStore: BlockLogStore) : InferenceScheduler.BatchExecutor {
+        private val blockLogStore: BlockLogStore,
+        private val learnedRules: LearnedRuleStore) : InferenceScheduler.BatchExecutor {
 
     override fun name(): String {
         val model = AssistantNotifyConfig.judgeModelIdStatic(appContext)
@@ -60,13 +60,9 @@ class LlmJudgeExecutor private constructor(
             return
         }
 
-        val requestFile = File(appContext.filesDir, AssistantJudgeService.REQUEST_FILE)
-        val resultFile = File(appContext.filesDir, AssistantJudgeService.RESULT_FILE)
-        // Stale-result protection: drop leftovers before starting.
-        resultFile.delete()
-
         try {
             val req = JSONObject()
+            req.put("mode", "judge")
             req.put("modelId", modelId)
             req.put("configPath", configPath)
             val arr = JSONArray()
@@ -78,59 +74,24 @@ class LlmJudgeExecutor private constructor(
                 })
             }
             req.put("items", arr)
-            FileOutputStream(requestFile).use { fos ->
-                fos.write(req.toString().toByteArray(Charsets.UTF_8))
-                fos.fd.sync()
+            val result = AssistantLlmClient.request(appContext, req, TIMEOUT_MS)
+            if (result == null) {
+                Log.w(TAG, "judge request failed/timeout — re-queue " + items.size)
+                requeue(items)
+                return
             }
-        } catch (t: Throwable) {
-            Log.w(TAG, "request write failed — re-queue", t)
-            requeue(items)
-            return
-        }
-
-        val started = try {
-            appContext.startService(Intent(appContext, AssistantJudgeService::class.java))
-            true
-        } catch (t: Throwable) {
-            Log.w(TAG, "judge service start failed — re-queue", t)
-            false
-        }
-        if (!started) {
-            requeue(items)
-            return
-        }
-
-        // Poll for the result file (service lives in another process).
-        val deadline = System.currentTimeMillis() + TIMEOUT_MS
-        var resultJson: JSONObject? = null
-        while (System.currentTimeMillis() < deadline) {
-            Thread.sleep(POLL_MS)
-            if (resultFile.exists()) {
-                resultJson = try {
-                    JSONObject(resultFile.readText())
-                } catch (t: Throwable) {
-                    Log.w(TAG, "result read failed", t)
-                    null
-                }
-                break
+            if (!result.optBoolean("ok", false)) {
+                // R4 降级: unparsable after retry — fail open as non-ad, but still
+                // feed the digest so summarization works without ad judgment.
+                Log.w(TAG, "judge failed: " + result.optString("error", "?") + " — fail open")
+                failOpen(items)
+                return
             }
-        }
-        if (resultJson == null) {
-            Log.w(TAG, "judge timeout (${TIMEOUT_MS / 1000}s) — re-queue " + items.size)
+            applyVerdicts(items, result)
+        } catch (t: Throwable) {
+            Log.w(TAG, "judge batch crashed — re-queue", t)
             requeue(items)
-            return
         }
-        resultFile.delete()
-
-        if (!resultJson.optBoolean("ok", false)) {
-            // R4 降级: unparsable after retry — fail open as non-ad, but still
-            // feed the digest so summarization works without ad judgment.
-            Log.w(TAG, "judge failed: " + resultJson.optString("error", "?") + " — fail open")
-            failOpen(items)
-            return
-        }
-
-        applyVerdicts(items, resultJson)
     }
 
     private fun applyVerdicts(items: List<PendingQueueStore.Item>, result: JSONObject) {
@@ -152,8 +113,12 @@ class LlmJudgeExecutor private constructor(
                 if (conf >= threshold) {
                     if (SmartNotificationListener.cancelByKey(it.key)) {
                         cancelled++
+                        // Task 5: record the retract latency (postedAt -> cancel)
+                        // alongside the block, for the task 10 audit trail.
+                        val delaySec = (System.currentTimeMillis() - it.postedAt) / 1000
                         blockLogStore.record(it.pkg, it.title, it.text,
-                                "llm-ad conf=" + "%.2f".format(conf))
+                                "llm-ad conf=" + "%.2f".format(conf)
+                                        + " delay=" + delaySec + "s")
                         if (rule.isNotEmpty()) {
                             appendCandidateRule(rule, it, conf)
                         }
@@ -198,6 +163,10 @@ class LlmJudgeExecutor private constructor(
     }
 
     private fun appendCandidateRule(rule: String, it: PendingQueueStore.Item, conf: Double) {
+        // Task 6: the store decides pending-vs-auto-confirm by the silent
+        // threshold; the JSONL append stays as an append-only audit trail.
+        learnedRules.addCandidate(rule, it.pkg, it.title, conf,
+                AssistantNotifyConfig.ruleAutoConfirmThresholdStatic(appContext))
         try {
             val f = File(appContext.filesDir, CANDIDATES_FILE)
             val entry = JSONObject().apply {
@@ -220,15 +189,15 @@ class LlmJudgeExecutor private constructor(
         const val CANDIDATES_FILE = "assistant_rule_candidates.jsonl"
         /** Multi-minute generations are normal on small phones; 20 min cap. */
         private const val TIMEOUT_MS = 20L * 60 * 1000
-        private const val POLL_MS = 2000L
 
         @Volatile private var instance: LlmJudgeExecutor? = null
 
         @JvmStatic
-        fun attach(context: Context, digestStore: DigestStore, blockLogStore: BlockLogStore) {
+        fun attach(context: Context, digestStore: DigestStore, blockLogStore: BlockLogStore,
+                   learnedRules: LearnedRuleStore) {
             if (instance == null) {
                 instance = LlmJudgeExecutor(
-                        context.applicationContext, digestStore, blockLogStore)
+                        context.applicationContext, digestStore, blockLogStore, learnedRules)
             }
             InferenceScheduler.setExecutor(instance)
         }

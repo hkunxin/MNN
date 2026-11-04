@@ -72,19 +72,40 @@ class AssistantJudgeService : Service() {
             return
         }
         val modelId = req.optString("modelId", "")
+        val reqId = req.optString("reqId", "")
+        fun fail(msg: String) {
+            // Errors MUST echo the reqId so the waiting client stops polling.
+            writeResult(JSONObject().apply {
+                put("ok", false); put("reqId", reqId); put("error", msg)
+            }.toString())
+        }
         if (modelId.isEmpty()) {
-            writeResult(JudgePrompt.errorJson("empty modelId"))
+            fail("empty modelId")
             return
         }
+
+        // Task 7/9: the same ":llm" session infrastructure serves three modes.
+        when (req.optString("mode", "judge")) {
+            "summary" -> runSummary(req, modelId, reqId, ::fail)
+            "minutes" -> runMinutes(req, modelId, reqId, ::fail)
+            else -> runJudge(req, modelId, reqId, ::fail)
+        }
+    }
+
+    /** Task 4: batch ad judgment (unchanged behavior, extracted). */
+    private fun runJudge(req: JSONObject, modelId: String, reqId: String,
+                         fail: (String) -> Unit) {
+        val resultFile = File(filesDir, RESULT_FILE)
+        val requestFile = File(filesDir, REQUEST_FILE)
         val items = req.optJSONArray("items") ?: JSONArray()
         if (items.length() == 0) {
-            writeResult(JudgePrompt.errorJson("empty items"))
+            fail("empty items")
             return
         }
 
         val t0 = System.currentTimeMillis()
         val session = ensureSession(modelId) ?: run {
-            writeResult(JudgePrompt.errorJson("session init failed for $modelId"))
+            fail("session init failed for $modelId")
             return
         }
 
@@ -109,10 +130,8 @@ class AssistantJudgeService : Service() {
             verdicts = JudgePrompt.parse(raw, list.size)
         }
 
-        val out = JSONObject()
+        val out = baseResult(modelId, System.currentTimeMillis() - t0, reqId)
         out.put("ok", verdicts != null)
-        out.put("modelId", modelId)
-        out.put("costMs", System.currentTimeMillis() - t0)
         out.put("raw", raw.take(4000))
         val arr = JSONArray()
         verdicts?.forEach { v ->
@@ -130,6 +149,69 @@ class AssistantJudgeService : Service() {
         Log.i(TAG, "judge done model=$modelId n=" + list.size
                 + " costMs=" + out.getLong("costMs") + " parsed=" + (verdicts != null))
     }
+
+    /** Task 7: digest summarization; the raw text is the deliverable. */
+    private fun runSummary(req: JSONObject, modelId: String, reqId: String,
+                           fail: (String) -> Unit) {
+        val resultFile = File(filesDir, RESULT_FILE)
+        val requestFile = File(filesDir, REQUEST_FILE)
+        val items = req.optJSONArray("items") ?: JSONArray()
+        if (items.length() == 0) {
+            fail("empty items")
+            return
+        }
+        val t0 = System.currentTimeMillis()
+        val session = ensureSession(modelId) ?: run {
+            fail("session init failed for $modelId")
+            return
+        }
+        val list = ArrayList<DigestStore.Item>(items.length())
+        for (i in 0 until items.length()) {
+            val o = items.getJSONObject(i)
+            list.add(DigestStore.Item(
+                    o.optString("pkg"), o.optString("title"),
+                    o.optString("text"), o.optLong("postedAt")))
+        }
+        val raw = generateText(session, SummarizePrompt.buildSummary(list))
+        val out = baseResult(modelId, System.currentTimeMillis() - t0, reqId)
+        out.put("ok", raw.isNotBlank())
+        out.put("text", raw)
+        resultFile.writeText(out.toString())
+        requestFile.delete()
+        Log.i(TAG, "summary done model=$modelId n=" + list.size
+                + " costMs=" + out.getLong("costMs"))
+    }
+
+    /** Task 9: meeting minutes from a transcript. */
+    private fun runMinutes(req: JSONObject, modelId: String, reqId: String,
+                           fail: (String) -> Unit) {
+        val resultFile = File(filesDir, RESULT_FILE)
+        val requestFile = File(filesDir, REQUEST_FILE)
+        val transcript = req.optString("text", "")
+        if (transcript.isBlank()) {
+            fail("empty transcript")
+            return
+        }
+        val t0 = System.currentTimeMillis()
+        val session = ensureSession(modelId) ?: run {
+            fail("session init failed for $modelId")
+            return
+        }
+        val raw = generateText(session, SummarizePrompt.buildMinutes(transcript))
+        val out = baseResult(modelId, System.currentTimeMillis() - t0, reqId)
+        out.put("ok", raw.isNotBlank())
+        out.put("text", raw)
+        resultFile.writeText(out.toString())
+        requestFile.delete()
+        Log.i(TAG, "minutes done model=$modelId costMs=" + out.getLong("costMs"))
+    }
+
+    private fun baseResult(modelId: String, costMs: Long, reqId: String): JSONObject =
+        JSONObject().apply {
+            put("reqId", reqId)
+            put("modelId", modelId)
+            put("costMs", costMs)
+        }
 
     private fun writeResult(json: String) {
         try {
