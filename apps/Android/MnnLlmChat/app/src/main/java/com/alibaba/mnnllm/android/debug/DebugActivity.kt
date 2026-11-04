@@ -726,6 +726,26 @@ class DebugActivity : AppCompatActivity() {
         parentView.findViewById<Button>(R.id.notifyRefreshButton).setOnClickListener {
             refreshNotifyStatus()
         }
+        parentView.findViewById<Button>(R.id.notifyClearQueueButton).setOnClickListener {
+            try {
+                val store = com.alibaba.mnnllm.android.assistant.notify.PendingQueueStore(this)
+                store.clear()
+                log("待判队列已清空")
+                refreshNotifyStatus()
+            } catch (e: Exception) {
+                log("清空队列失败: ${e.message}")
+            }
+        }
+        parentView.findViewById<Button>(R.id.notifyClearDigestButton).setOnClickListener {
+            try {
+                val store = com.alibaba.mnnllm.android.assistant.notify.DigestStore(this)
+                store.clear()
+                log("摘要库已清空")
+                refreshNotifyStatus()
+            } catch (e: Exception) {
+                log("清空摘要库失败: ${e.message}")
+            }
+        }
         refreshNotifyStatus()
     }
 
@@ -750,7 +770,26 @@ class DebugActivity : AppCompatActivity() {
         }
         sb.append("\n默认渠道规则: .*营销.*  (内置, 总是生效)\n")
         sb.append("观察到的渠道存储: filesDir/assistant_channels.json\n")
-        sb.append("内容拦截日志: filesDir/assistant_block_log.json")
+        sb.append("内容拦截日志: filesDir/assistant_block_log.json\n")
+        try {
+            val queue = com.alibaba.mnnllm.android.assistant.notify.PendingQueueStore(this)
+            val digest = com.alibaba.mnnllm.android.assistant.notify.DigestStore(this)
+            sb.append("\n待判队列 (上限500, 重启保留): ").append(queue.size()).append(" 条\n")
+            queue.peekOldest(3).forEach {
+                sb.append("  · [").append(it.pkg).append("] ")
+                    .append(it.title?.take(30)).append(" | ")
+                    .append(it.text?.take(40)).append("\n")
+            }
+            sb.append("\n摘要库 (24h 环形, 验证码排除): ").append(digest.size()).append(" 条")
+            digest.recent().takeLast(3).forEach {
+                sb.append("\n  · [").append(it.pkg).append("] ")
+                    .append(it.title?.take(30)).append(" | ")
+                    .append(it.text?.take(40))
+            }
+            sb.append("\n\n存储: filesDir/assistant_pending_queue.json, assistant_digest.json")
+        } catch (e: Exception) {
+            sb.append("\n存储读取失败: ").append(e.message)
+        }
         text.text = sb.toString()
         log("notify status refreshed: bound=" +
                 com.alibaba.mnnllm.android.assistant.notify.SmartNotificationListener.isConnected())

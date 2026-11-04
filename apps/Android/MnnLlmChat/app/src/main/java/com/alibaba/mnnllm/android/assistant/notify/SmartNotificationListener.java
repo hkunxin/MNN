@@ -27,8 +27,8 @@ import java.util.List;
  *    via logcat (task 1 completion criterion)
  *  - per-post stats are logged, not persisted (a stats store belongs to the
  *    assistant UI task)
- *  - a {@link #QUEUE_HOOK_TODO} marker marks where task 2's PendingQueueStore
- *    enqueue (no-match path -> batched LLM judgment) will attach
+ *  - the no-match path enqueues into {@link PendingQueueStore} (task 2) for
+ *    batched LLM judgment; nothing here ever runs a model (R1/R2)
  *
  * Hard rules mirrored from the original: never touch this app's own
  * notifications, never touch a foreground-service notification, and never let
@@ -37,14 +37,6 @@ import java.util.List;
 public final class SmartNotificationListener extends NotificationListenerService {
 
     static final String TAG = "SmartNotify";
-
-    /**
-     * Task-2 hook marker: the no-match path will enqueue the notification for
-     * batched on-device LLM judgment (screen-on + >=30min gating) instead of
-     * silently allowing it. Intentionally not implemented in task 1.
-     */
-    @SuppressWarnings("unused")
-    private static final String QUEUE_HOOK_TODO = "spec002-task2";
 
     /**
      * Whether the system currently has this listener BOUND — not the same thing
@@ -56,6 +48,8 @@ public final class SmartNotificationListener extends NotificationListenerService
     private volatile AssistantNotifyConfig config;
     private ObservedChannelStore channelStore;
     private BlockLogStore blockLogStore;
+    private PendingQueueStore pendingQueue;
+    private DigestStore digestStore;
 
     /** @return true while the system has this listener bound and delivering. */
     public static boolean isConnected() {
@@ -74,6 +68,8 @@ public final class SmartNotificationListener extends NotificationListenerService
         config = new AssistantNotifyConfig(this);
         channelStore = new ObservedChannelStore(this);
         blockLogStore = new BlockLogStore(this);
+        pendingQueue = new PendingQueueStore(this);
+        digestStore = new DigestStore(this);
         connected = true;
         Log.i(TAG, "listener connected — assistant notify chain active");
     }
@@ -178,9 +174,22 @@ public final class SmartNotificationListener extends NotificationListenerService
                         + " level=" + (contentBlock ? "content" : "channel")
                         + " reason=" + d.reason);
             } else {
-                // QUEUE_HOOK_TODO(spec002-task2): enqueue for batched LLM judgment.
-                Log.d(TAG, "pkg=" + pkg + " key=" + sbn.getKey() + " allow (no-match)"
-                        + " key-queued=no");
+                // R1: no-match -> persistent queue for batched LLM judgment
+                // (task 3 scheduler drains it; zero inference on this path).
+                // The sbn key is kept so a later ad verdict can cancel it.
+                if (pendingQueue != null) {
+                    String title = extractField(n, Notification.EXTRA_TITLE);
+                    String body = firstNonEmpty(new String[]{
+                            extractField(n, Notification.EXTRA_TEXT),
+                            extractField(n, Notification.EXTRA_BIG_TEXT)});
+                    pendingQueue.enqueue(new PendingQueueStore.Item(
+                            sbn.getKey(), pkg, title, body, sbn.getPostTime()));
+                    Log.d(TAG, "pkg=" + pkg + " key=" + sbn.getKey() + " allow (no-match)"
+                            + " key-queued=yes queueSize=" + pendingQueue.size());
+                } else {
+                    Log.d(TAG, "pkg=" + pkg + " key=" + sbn.getKey() + " allow (no-match)"
+                            + " key-queued=no (store not ready)");
+                }
             }
         } catch (Throwable t) {
             // A failure here must never crash this app's process.
