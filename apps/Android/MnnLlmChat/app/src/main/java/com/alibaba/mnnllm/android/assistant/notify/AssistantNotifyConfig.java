@@ -34,6 +34,8 @@ public final class AssistantNotifyConfig {
     static final String KEY_CONTENT_RULES = "content_rules";
     static final String KEY_OVERRIDES = "overrides";
     static final String KEY_APP_WHITELIST = "app_whitelist";
+    static final String KEY_JUDGE_MODEL_ID = "judge_model_id";
+    static final String KEY_AD_CONF_THRESHOLD = "ad_conf_threshold";
 
     private final SharedPreferences prefs;
     private final SharedPreferences.OnSharedPreferenceChangeListener listener =
@@ -141,5 +143,31 @@ public final class AssistantNotifyConfig {
 
     RuleMatcher contentMatcher() {
         return contentMatcher;
+    }
+
+    /** Task 4: which installed chat model judges batches (user-selectable). */
+    public static String judgeModelIdStatic(Context context) {
+        return context.getApplicationContext()
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getString(KEY_JUDGE_MODEL_ID, "");
+    }
+
+    public static void setJudgeModelId(Context context, String modelId) {
+        context.getApplicationContext()
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putString(KEY_JUDGE_MODEL_ID, modelId == null ? "" : modelId).apply();
+    }
+
+    /** Ads at/above this self-reported confidence are cancelled (task 6 refines). */
+    public static double adConfidenceThresholdStatic(Context context) {
+        return (double) context.getApplicationContext()
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .getFloat(KEY_AD_CONF_THRESHOLD, 0.5f);
+    }
+
+    public static void setAdConfidenceThreshold(Context context, double v) {
+        context.getApplicationContext()
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putFloat(KEY_AD_CONF_THRESHOLD, (float) v).apply();
     }
 }

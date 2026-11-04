@@ -44,6 +44,8 @@ public final class SmartNotificationListener extends NotificationListenerService
      * has no handle on the service instance.
      */
     private static volatile boolean connected;
+    /** Bound instance so other components (LlmJudgeExecutor) can cancel. */
+    private static volatile SmartNotificationListener instance;
 
     private volatile AssistantNotifyConfig config;
     private ObservedChannelStore channelStore;
@@ -54,6 +56,25 @@ public final class SmartNotificationListener extends NotificationListenerService
     /** @return true while the system has this listener bound and delivering. */
     public static boolean isConnected() {
         return connected;
+    }
+
+    /**
+     * Cancel a notification by key from outside the service (task 4/5:
+     * LLM ad verdicts). @return true when handed to the system; false when
+     * the listener is unbound (key stale — caller drops the item).
+     */
+    public static boolean cancelByKey(String key) {
+        SmartNotificationListener l = instance;
+        if (l == null || key == null) {
+            return false;
+        }
+        try {
+            l.cancelNotification(key);
+            return true;
+        } catch (Throwable t) {
+            Log.w(TAG, "cancelByKey failed for " + key, t);
+            return false;
+        }
     }
 
     @Override
@@ -70,7 +91,9 @@ public final class SmartNotificationListener extends NotificationListenerService
         blockLogStore = new BlockLogStore(this);
         pendingQueue = new PendingQueueStore(this);
         digestStore = new DigestStore(this);
+        instance = this;
         InferenceScheduler.start(this, pendingQueue);
+        LlmJudgeExecutor.attach(this, digestStore, blockLogStore);
         connected = true;
         Log.i(TAG, "listener connected — assistant notify chain active");
     }
@@ -85,6 +108,7 @@ public final class SmartNotificationListener extends NotificationListenerService
     @Override
     public void onDestroy() {
         connected = false;
+        instance = null;
         InferenceScheduler.stop(this);
         AssistantNotifyConfig cfg = config;
         if (cfg != null) {

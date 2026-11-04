@@ -22,7 +22,7 @@ import java.util.Map;
  * is local (the fork has no ContentBlockLogStore to share it with).
  * File: getFilesDir()/assistant_block_log.json (app-private, no lockdown needed).
  */
-final class BlockLogStore {
+public final class BlockLogStore {
 
     private static final String FILE_NAME = "assistant_block_log.json";
     private static final int MAX_PER_APP = 100;
@@ -50,7 +50,7 @@ final class BlockLogStore {
     private boolean loaded;
     private long fileMtime = Long.MIN_VALUE;
 
-    BlockLogStore(Context context) {
+    public BlockLogStore(Context context) {
         this(fileFor(context));
     }
 

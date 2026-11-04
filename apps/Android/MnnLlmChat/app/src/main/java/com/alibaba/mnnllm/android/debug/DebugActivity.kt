@@ -755,6 +755,16 @@ class DebugActivity : AppCompatActivity() {
             }
             refreshNotifyStatus()
         }
+        parentView.findViewById<Button>(R.id.notifyJudgeModelSetButton).setOnClickListener {
+            val v = parentView.findViewById<EditText>(R.id.notifyJudgeModelEdit).text.toString().trim()
+            if (v.isEmpty()) {
+                log("判定模型 modelId 不能为空")
+            } else {
+                com.alibaba.mnnllm.android.assistant.notify.AssistantNotifyConfig.setJudgeModelId(this, v)
+                log("判定模型已设置: $v")
+                refreshNotifyStatus()
+            }
+        }
         refreshNotifyStatus()
     }
 
@@ -800,6 +810,9 @@ class DebugActivity : AppCompatActivity() {
                 com.alibaba.mnnllm.android.assistant.notify.InferenceScheduler.statusLine(this))
                 .append("\n执行器: ").append(
                 com.alibaba.mnnllm.android.assistant.notify.InferenceScheduler.executorName())
+                .append("\n判定模型: ").append(
+                com.alibaba.mnnllm.android.assistant.notify.AssistantNotifyConfig.judgeModelIdStatic(this)
+                    ?.ifEmpty { "(未设置)" })
         } catch (e: Exception) {
             sb.append("\n存储读取失败: ").append(e.message)
         }

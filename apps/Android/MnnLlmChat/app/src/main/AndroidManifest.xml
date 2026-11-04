@@ -179,6 +179,13 @@
             android:name="com.alibaba.mnnllm.android.assistant.notify.InferenceScheduler$InferenceSchedulerReceiver"
             android:exported="false" />
 
+        <!-- Spec-002 task 4: batch ad judgment in a dedicated process so the
+             ~1GB model can never pressure the resident notification listener. -->
+        <service
+            android:name="com.alibaba.mnnllm.android.assistant.notify.AssistantJudgeService"
+            android:exported="false"
+            android:process=":llm" />
+
     </application>
 
 </manifest>
