@@ -272,7 +272,9 @@ class MainSettingsFragment : Fragment() {
     private fun setupDebugMode(
         sharedPreferences: android.content.SharedPreferences
     ) {
-        val isActivated = sharedPreferences.getBoolean("debug_mode_activated", false)
+        // Spec002 临时放开：Debug 面板默认常显（流式调研/通知链真机测试需要常规入口）。
+        // 功能稳定后回退为 false，恢复「连点 5 次检查更新」彩蛋激活。
+        val isActivated = sharedPreferences.getBoolean("debug_mode_activated", true)
         updateDebugModeVisibility(isActivated)
 
         binding.btnDebugMode.setOnClickListener {
