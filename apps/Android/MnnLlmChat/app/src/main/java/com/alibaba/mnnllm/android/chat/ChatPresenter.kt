@@ -9,6 +9,9 @@ import androidx.lifecycle.lifecycleScope
 import com.alibaba.mls.api.ModelItem
 import com.alibaba.mnnllm.android.llm.ChatService
 import com.alibaba.mnnllm.android.llm.ChatSession
+import com.alibaba.mnnllm.android.llm.LlmSession
+import com.alibaba.mnnllm.android.memory.MemoryExtractor
+import com.alibaba.mnnllm.android.memory.MemoryStore
 import com.alibaba.mnnllm.api.openai.di.ServiceLocator
 import com.alibaba.mnnllm.api.openai.manager.ServerEventManager
 import com.alibaba.mnnllm.android.chat.model.ChatDataItem
@@ -134,6 +137,10 @@ class ChatPresenter(
         }
         sessionId = chatSession.sessionId
         chatSession.setKeepHistory(true)
+
+        // Spec 005 R5/R6: 把长期记忆拼进本会话的 system prompt。
+        // 空记忆不注入；重复进入同一会话时 LlmSession 内部按内容比对，不会累积。
+        injectMemories()
         
         Log.d(TAG, "createSession: created session with sessionId=$sessionId, historySize=${chatSession.getHistory()?.size ?: 0}")
         return chatSession
@@ -306,7 +313,15 @@ class ChatPresenter(
             val result = presenterScope.async {
                 return@async submitRequest(prompt, userData)
             }.await()
-            
+
+            // Spec 005 R8/R9: 一轮正常结束后按轮次触发后台记忆抽取。
+            // 旁路能力：未配置模型/超时/解析失败都只记日志，不影响本轮回答。
+            if (result["error"] != true) {
+                runCatching {
+                    MemoryExtractor.onTurnFinished(chatActivity.applicationContext, sessionId)
+                }.onFailure { Log.w(TAG, "memory extract trigger failed", it) }
+            }
+
             return result
         } catch (e: CancellationException) {
             throw e
@@ -512,7 +527,25 @@ class ChatPresenter(
         chatSession = newSession
         sessionId = newSession.sessionId
         chatSession.setKeepHistory(true)
+        // Spec 005 R6: 切换模型 = 新建会话，记忆需重新注入（新 session 尚未 load）。
+        injectMemories()
         return newSession
+    }
+
+    /**
+     * Spec 005 task 5: 注入长期记忆。
+     * 幂等由 LlmSession.applySystemPromptExtra 保证（内容相同即跳过）。
+     */
+    private fun injectMemories() {
+        runCatching {
+            val block = MemoryStore.buildPromptBlock()
+            (chatSession as? LlmSession)?.applySystemPromptExtra(block.text)
+            Log.i(
+                TAG,
+                "memory injection count=${block.count} chars=${block.text.length} " +
+                    "store=[${MemoryStore.debugSummary()}]"
+            )
+        }.onFailure { Log.w(TAG, "memory injection failed", it) }
     }
     
     private fun updateDatabaseForModelSwitch(oldSessionId: String?, newModelId: String) {

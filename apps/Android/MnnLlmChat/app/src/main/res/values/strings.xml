@@ -148,6 +148,32 @@
     <string name="diffusion_memory_mode">Diffusion Memory Mode</string>
     <string name="voice_model_management">Voice Model Management</string>
     <string name="storage_management">Storage management</string>
+
+    <!-- Spec 005: default chat model + memory -->
+    <string name="default_chat_model">Default chat model</string>
+    <string name="default_chat_model_empty">No model available</string>
+    <string name="default_chat_model_saved">Default chat model updated</string>
+    <string name="no_chat_model_title">No model available</string>
+    <string name="no_chat_model_message">Download or import a model first, then set it as the default chat model.</string>
+    <string name="no_chat_model_go">Open model management</string>
+    <string name="memory">Memory</string>
+    <string name="memory_summary">Facts and preferences the assistant remembers</string>
+    <string name="memory_auto_extract">Learn from chats automatically</string>
+    <string name="memory_auto_extract_summary">Extract durable facts every 4 rounds, using the assistant judge model</string>
+    <string name="memory_auto_extract_needs_model">Set the judge model in Assistant settings to enable this</string>
+    <string name="memory_add">Add memory</string>
+    <string name="memory_edit">Edit memory</string>
+    <string name="memory_empty">No memories yet. Add one, or let the assistant learn from chats.</string>
+    <string name="memory_hint">e.g. Call me Boss. I prefer short answers.</string>
+    <string name="memory_saved">Saved</string>
+    <string name="memory_deleted">Deleted</string>
+    <string name="memory_delete">Delete</string>
+    <string name="memory_clear">Clear all memories</string>
+    <string name="memory_clear_confirm_title">Clear all memories?</string>
+    <string name="memory_clear_confirm_message">This removes both manually added and automatically learned memories. It cannot be undone.</string>
+    <string name="memory_source_manual">Manual</string>
+    <string name="memory_source_auto">Auto</string>
+    <string name="memory_count">%1$d memories, %2$d injected now</string>
     <string name="storage_summary_internal">Internal Storage</string>
     <string name="storage_summary_model">Model Storage</string>
     <string name="storage_total">Total</string>

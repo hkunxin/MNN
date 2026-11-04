@@ -88,6 +88,7 @@ class AssistantJudgeService : Service() {
         when (req.optString("mode", "judge")) {
             "summary" -> runSummary(req, modelId, reqId, ::fail)
             "minutes" -> runMinutes(req, modelId, reqId, ::fail)
+            "memory" -> runMemory(req, modelId, reqId, ::fail)
             else -> runJudge(req, modelId, reqId, ::fail)
         }
     }
@@ -206,8 +207,52 @@ class AssistantJudgeService : Service() {
         Log.i(TAG, "minutes done model=$modelId costMs=" + out.getLong("costMs"))
     }
 
-    private fun baseResult(modelId: String, costMs: Long, reqId: String): JSONObject =
-        JSONObject().apply {
+    /**
+     * Spec 005 task 7: 从最近对话中抽取长期记忆。
+     * 与判定/摘要共用同一 :llm 会话；抽取结果为空也是成功（本轮没有可记的内容）。
+     */
+    private fun runMemory(req: JSONObject, modelId: String, reqId: String,
+                          fail: (String) -> Unit) {
+        val resultFile = File(filesDir, RESULT_FILE)
+        val requestFile = File(filesDir, REQUEST_FILE)
+        val turnsArr = req.optJSONArray("turns") ?: JSONArray()
+        if (turnsArr.length() == 0) {
+            fail("empty turns")
+            return
+        }
+        val turns = ArrayList<Pair<String, String>>(turnsArr.length())
+        for (i in 0 until turnsArr.length()) {
+            val o = turnsArr.optJSONObject(i) ?: continue
+            val text = o.optString("text", "")
+            if (text.isBlank()) continue
+            turns.add(o.optString("role", "user") to text)
+        }
+        if (turns.isEmpty()) {
+            fail("no usable turns")
+            return
+        }
+        val existing = req.optJSONArray("existing")?.let { arr ->
+            (0 until arr.length()).map { arr.optString(it) }.filter { it.isNotBlank() }
+        } ?: emptyList()
+
+        val t0 = System.currentTimeMillis()
+        val session = ensureSession(modelId) ?: run {
+            fail("session init failed for $modelId")
+            return
+        }
+        val raw = generateText(session, com.alibaba.mnnllm.android.memory.MemoryPrompt.build(turns, existing))
+        val candidates = com.alibaba.mnnllm.android.memory.MemoryPrompt.parse(raw)
+        val out = baseResult(modelId, System.currentTimeMillis() - t0, reqId)
+        out.put("ok", true)
+        out.put("items", com.alibaba.mnnllm.android.memory.MemoryPrompt.toJson(candidates))
+        out.put("raw", raw.take(2000))
+        resultFile.writeText(out.toString())
+        requestFile.delete()
+        Log.i(TAG, "memory done model=$modelId turns=" + turns.size
+                + " candidates=" + candidates.size + " costMs=" + out.getLong("costMs"))
+    }
+
+    private fun baseResult(modelId: String, costMs: Long, reqId: String): JSONObject =        JSONObject().apply {
             put("reqId", reqId)
             put("modelId", modelId)
             put("costMs", costMs)

@@ -85,6 +85,8 @@ class MainSettingsFragment : Fragment() {
         setupVoiceModelManagement()
         setupStorageManagement()
         setupModelManagement()
+        setupDefaultChatModel()
+        setupMemory()
 
         binding.itemEnableApi.isChecked = MainSettings.isApiServiceEnabled(requireContext())
         binding.itemEnableApi.setOnCheckedChangeListener { isChecked ->
@@ -156,6 +158,47 @@ class MainSettingsFragment : Fragment() {
     private fun setupModelManagement() {
         binding.btnModelManagement.setOnClickListener {
             startActivity(Intent(requireContext(), com.alibaba.mnnllm.android.main.MainActivity::class.java))
+        }
+    }
+
+    /**
+     * Spec 005 R1：默认对话模型。选定后「新建对话」直接用该模型进对话页。
+     * 枚举可用模型涉及 SQLite 与目录扫描，放 IO 线程，回来再刷 UI。
+     */
+    private fun setupDefaultChatModel() {
+        val ctx = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            val options = withContext(Dispatchers.IO) {
+                com.alibaba.mnnllm.android.chat.DefaultChatModelStore.availableModels(ctx)
+            }
+            val b = _binding ?: return@launch
+            if (options.isEmpty()) {
+                b.dropdownDefaultChatModel.setValueText(getString(R.string.default_chat_model_empty))
+                b.dropdownDefaultChatModel.isEnabled = false
+                return@launch
+            }
+            b.dropdownDefaultChatModel.isEnabled = true
+            val labels = options.associate { it.modelId to it.displayName }
+            b.dropdownDefaultChatModel.setDropDownItems(
+                items = options.map { it.modelId },
+                itemToString = { id -> labels[id as String] ?: id.toString() },
+                onDropdownItemSelected = { _, selected ->
+                    com.alibaba.mnnllm.android.chat.DefaultChatModelStore
+                        .setDefaultModelId(ctx, selected as String)
+                    Toast.makeText(ctx, R.string.default_chat_model_saved, Toast.LENGTH_SHORT).show()
+                }
+            )
+            // 失效的旧选择（模型已删）不在候选里时，展示实际会用的兜底模型，避免设置页说一套、行为另一套。
+            val current = com.alibaba.mnnllm.android.chat.DefaultChatModelStore.getDefaultModelId(ctx)
+            val active = options.firstOrNull { it.modelId == current }?.modelId ?: options.first().modelId
+            b.dropdownDefaultChatModel.setCurrentItem(active)
+        }
+    }
+
+    /** Spec 005：记忆管理入口。 */
+    private fun setupMemory() {
+        binding.btnMemory.setOnClickListener {
+            startActivity(Intent(requireContext(), com.alibaba.mnnllm.android.memory.MemoryActivity::class.java))
         }
     }
 

@@ -140,6 +140,32 @@
     <string name="diffusion_memory_mode">Diffusion内存模式</string>
     <string name="voice_model_management">语音模型管理</string>
     <string name="storage_management">存储管理</string>
+
+    <!-- Spec 005：默认对话模型 + 记忆 -->
+    <string name="default_chat_model">默认对话模型</string>
+    <string name="default_chat_model_empty">暂无可用模型</string>
+    <string name="default_chat_model_saved">默认对话模型已更新</string>
+    <string name="no_chat_model_title">暂无可用模型</string>
+    <string name="no_chat_model_message">请先在模型管理中下载或导入模型，并把它设为默认对话模型。</string>
+    <string name="no_chat_model_go">去模型管理</string>
+    <string name="memory">记忆</string>
+    <string name="memory_summary">助理记住的事实与偏好</string>
+    <string name="memory_auto_extract">自动从对话中学习</string>
+    <string name="memory_auto_extract_summary">每 4 轮从对话中提取长期事实（使用助理判定模型）</string>
+    <string name="memory_auto_extract_needs_model">请先在「助理」设置中选定判定模型</string>
+    <string name="memory_add">新增记忆</string>
+    <string name="memory_edit">编辑记忆</string>
+    <string name="memory_empty">还没有记忆。可以手动添加，也可以让助理从对话中学习。</string>
+    <string name="memory_hint">例如：称呼我老板；回答尽量简短。</string>
+    <string name="memory_saved">已保存</string>
+    <string name="memory_deleted">已删除</string>
+    <string name="memory_delete">删除</string>
+    <string name="memory_clear">清空全部记忆</string>
+    <string name="memory_clear_confirm_title">清空全部记忆？</string>
+    <string name="memory_clear_confirm_message">将同时删除手动添加与自动学习的记忆，操作不可撤销。</string>
+    <string name="memory_source_manual">手动</string>
+    <string name="memory_source_auto">自动</string>
+    <string name="memory_count">共 %1$d 条，本次注入 %2$d 条</string>
     <string name="storage_summary_internal">内部存储</string>
     <string name="storage_summary_model">模型存储</string>
     <string name="storage_total">总计</string>

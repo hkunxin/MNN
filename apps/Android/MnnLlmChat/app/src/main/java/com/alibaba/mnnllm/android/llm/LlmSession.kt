@@ -49,6 +49,12 @@ class LlmSession (
 
     private var keepHistory = false
 
+    /**
+     * Spec 005 task 5: 记忆块。仅在 load() 组装 llmConfig 时拼到 system prompt 之后，
+     * 不落盘、不改模型配置；热复用（未重新 load）时由 [applySystemPromptExtra] 直接下发 native。
+     */
+    private var systemPromptExtra: String? = null
+
     private var isQnn = false
 
     override fun getHistory(): List<ChatDataItem>?{
@@ -107,6 +113,11 @@ class LlmSession (
         }
         if (isQnn) {
             llmConfig.visualModel = "visual_qnn_${QnnModule.modelMiddleName()}.mnn"
+        }
+        // Spec 005: 记忆注入 —— 只影响本次会话的 system prompt，模型配置文件保持原样。
+        systemPromptExtra?.takeIf { it.isNotBlank() }?.let { extra ->
+            llmConfig.systemPrompt = composeSystemPrompt(llmConfig.systemPrompt, extra)
+            Log.i(TAG, "memory injected into system prompt, chars=${extra.length}")
         }
         Log.d(TAG, "MNN_DEBUG load initNative")
         nativePtr = initNative(
@@ -290,6 +301,37 @@ class LlmSession (
         updateSystemPromptNative(nativePtr, systemPrompt)
     }
 
+    /**
+     * Spec 005 task 5: 设置本次会话的附加 system prompt（记忆块）。
+     *
+     * 两条路径，保证幂等（R6）：
+     *  - 尚未 load：只存字段，load() 组装 llmConfig 时一次性拼接；
+     *  - 已 load（RuntimeSessionReusePolicy 热复用）：以「当前模型配置的 base + 记忆块」
+     *    覆盖下发，不做增量追加，重复进入同一会话不会累积多份记忆。
+     */
+    fun applySystemPromptExtra(extra: String?) {
+        val block = extra?.takeIf { it.isNotBlank() }
+        if (block == systemPromptExtra) {
+            Log.d(TAG, "system prompt extra unchanged, skip")
+            return
+        }
+        systemPromptExtra = block
+        if (nativePtr == 0L) {
+            Log.d(TAG, "system prompt extra stored for next load, chars=${block?.length ?: 0}")
+            return
+        }
+        val base = runCatching {
+            ModelConfig.loadMergedConfig(configPath, getExtraConfigFile(modelId))?.systemPrompt
+        }.getOrNull()
+        updateSystemPrompt(composeSystemPrompt(base, block))
+        Log.i(TAG, "system prompt refreshed on loaded session, chars=${block?.length ?: 0}")
+    }
+
+    private fun composeSystemPrompt(base: String?, extra: String?): String {
+        val basePrompt = base?.takeIf { it.isNotBlank() } ?: DEFAULT_SYSTEM_PROMPT
+        return if (extra.isNullOrBlank()) basePrompt else basePrompt + "\n\n" + extra
+    }
+
     override fun updateThinking(thinking: Boolean) {
         val loadedConfig = loadConfig(modelId)
         loadedConfig?.let {
@@ -318,6 +360,9 @@ class LlmSession (
 
     companion object {
         const val TAG: String = "LlmSession"
+
+        /** 与 ModelConfig 默认值保持一致，模型配置没写 system_prompt 时用它兜底。 */
+        private const val DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant."
         var mockLatex: Boolean = false
         var mockLatexContent: String? = null
 

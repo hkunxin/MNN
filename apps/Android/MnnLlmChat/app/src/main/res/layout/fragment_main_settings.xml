@@ -55,6 +55,23 @@
                     app:labelText="@string/select_download_provider" />
 
 
+                <!-- Spec 005 R1: 默认对话模型，选定后「新建对话」直达，无需先选模型 -->
+                <com.alibaba.mnnllm.android.modelsettings.DropDownLineView
+                    android:id="@+id/dropdown_default_chat_model"
+                    style="@style/SettingsRowContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    app:icon="@drawable/baseline_arrow_drop_down_24"
+                    app:labelText="@string/default_chat_model" />
+
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp" />
+
                 <TextView
                     android:id="@+id/btn_model_management"
                     style="@style/SettingsRowClickable"
@@ -87,6 +104,20 @@
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
                     android:text="@string/storage_management" />
+
+                <!-- Spec 005: 记忆管理入口 -->
+                <com.google.android.material.divider.MaterialDivider
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    android:layout_marginEnd="16dp" />
+
+                <TextView
+                    android:id="@+id/btn_memory"
+                    style="@style/SettingsRowClickable"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:text="@string/memory" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

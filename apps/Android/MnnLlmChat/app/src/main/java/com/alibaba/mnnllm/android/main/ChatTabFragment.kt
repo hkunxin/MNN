@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.alibaba.mnnllm.android.R
 import com.alibaba.mnnllm.android.assistant.notify.meeting.MeetingActivity
+import com.alibaba.mnnllm.android.chat.NewChatLauncher
 import com.alibaba.mnnllm.android.history.ChatHistoryFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 
@@ -37,14 +38,17 @@ class ChatTabFragment : Fragment() {
         return view
     }
 
-    /** 设计稿 FAB 决策：点击展开两项「💬 新建对话 / 🎙 开始会议」。 */
+    /**
+     * 设计稿 FAB 决策：点击展开两项「💬 新建对话 / 🎙 开始会议」。
+     * Spec 005 R2：「新建对话」不再跳模型列表，直接用设置里的默认模型进对话页。
+     */
     private fun showFabMenu() {
         val ctx = context ?: return
         MaterialAlertDialogBuilder(ctx)
             .setTitle("开始")
             .setItems(arrayOf("💬  新建对话", "🎙  开始会议")) { _, which ->
                 when (which) {
-                    0 -> startActivity(Intent(ctx, MainActivity::class.java))
+                    0 -> NewChatLauncher.openNewChat(ctx)
                     1 -> startActivity(Intent(ctx, MeetingActivity::class.java))
                 }
             }

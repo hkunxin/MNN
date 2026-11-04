@@ -640,6 +640,19 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private suspend fun handleSendMessage(userData: ChatDataItem): HashMap<String, Any> {
+        // Spec 005 R10: 意图识别前哨。本期只产日志、不改行为；
+        // 后续接业务时在 sendMessage 之前插入 IntentRouter.dispatch(...) 的短路判断。
+        runCatching {
+            val text = userData.text.orEmpty()
+            if (text.isNotBlank()) {
+                val intent = com.alibaba.mnnllm.android.intent.IntentRouter.classifier().classify(text)
+                Log.i(
+                    INTENT_TAG,
+                    "intent=${intent.intent.label} confidence=${intent.confidence} " +
+                        "slots=${intent.slots} source=${intent.source} text=${text.take(30)}"
+                )
+            }
+        }.onFailure { Log.w(INTENT_TAG, "intent classify failed", it) }
         return chatPresenter.sendMessage(userData)
     }
 
@@ -1056,6 +1069,9 @@ class ChatActivity : AppCompatActivity() {
 
     companion object {
         const val TAG: String = "ChatActivity"
+
+        /** Spec 005: 意图识别日志 TAG，方便 adb logcat -s IntentRouter 单独观测。 */
+        private const val INTENT_TAG: String = "IntentRouter"
         const val EXTRA_MOCK_STREAM_ENABLE = "mock_stream_enable"
         const val EXTRA_MOCK_STREAM_CONTENT = "mock_stream_content"
         const val EXTRA_MOCK_STREAM_CONTENT_FILE = "mock_stream_content_file"

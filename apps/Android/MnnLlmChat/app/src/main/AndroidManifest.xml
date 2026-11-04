@@ -213,6 +213,12 @@
             android:name="com.alibaba.mnnllm.android.assistant.notify.meeting.MeetingActivity"
             android:exported="false"
             android:label="会议记录" />
+
+        <!-- Spec-005: 记忆管理页（默认对话模型在「我的」设置页配置） -->
+        <activity
+            android:name="com.alibaba.mnnllm.android.memory.MemoryActivity"
+            android:exported="false"
+            android:label="记忆" />
         <service
             android:name="com.alibaba.mnnllm.android.assistant.notify.meeting.MeetingRecordService"
             android:exported="false"
